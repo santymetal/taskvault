@@ -11,6 +11,23 @@
     <title>TaskVault - Your Secondary Brain</title>
     <script type="module" crossorigin src="./assets/index-CtiuRYXA.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-BgmJhlju.css">
+    <script>
+      // Override fetch to prevent server API calls and use localStorage instead
+      window.GITHUB_PAGES_MODE = true;
+      const originalFetch = window.fetch;
+      window.fetch = async function(url, options) {
+        // If it's an API call, return empty response to prevent errors
+        if (typeof url === 'string' && url.startsWith('/api/')) {
+          console.log('GitHub Pages: Intercepted API call to', url);
+          return new Response('[]', {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        // Otherwise use original fetch
+        return originalFetch.apply(this, arguments);
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>
