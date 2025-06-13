@@ -17,21 +17,34 @@
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
         .task-item { transition: all 0.2s ease; }
         .task-item:hover { transform: translateY(-1px); }
-        .completed { opacity: 0.6; text-decoration: line-through; }
+        .completed { opacity: 0.6; }
+        .completed .task-title { text-decoration: line-through; }
+        .priority-high { border-left: 4px solid #ef4444; }
+        .priority-medium { border-left: 4px solid #f59e0b; }
+        .priority-low { border-left: 4px solid #10b981; }
+        .overdue { background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%); border-color: #fca5a5; }
+        .notification-dot { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .modal-backdrop { backdrop-filter: blur(4px); }
+        .tag { display: inline-block; padding: 2px 8px; margin: 2px; border-radius: 12px; font-size: 12px; }
+        .floating-add { position: fixed; bottom: 20px; right: 20px; z-index: 50; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div id="root"></div>
     
     <script>
-        const { useState, useEffect, createElement: e } = React;
+        const { useState, useEffect, createElement: e, useRef } = React;
         
-        // Local Storage Manager
+        // Enhanced Local Storage Manager
         class TaskStorage {
             constructor() {
                 this.storageKey = 'taskvault-tasks';
+                this.settingsKey = 'taskvault-settings';
                 this.tasks = this.loadTasks();
+                this.settings = this.loadSettings();
                 this.nextId = Math.max(...this.tasks.map(t => t.id), 0) + 1;
+                this.initializeNotifications();
             }
             
             loadTasks() {
@@ -43,21 +56,55 @@
                 }
             }
             
+            loadSettings() {
+                try {
+                    const stored = localStorage.getItem(this.settingsKey);
+                    return stored ? JSON.parse(stored) : {
+                        notifications: false,
+                        notificationTime: '09:00',
+                        whatsappNumber: '',
+                        emailAddress: ''
+                    };
+                } catch (error) {
+                    return { notifications: false, notificationTime: '09:00', whatsappNumber: '', emailAddress: '' };
+                }
+            }
+            
             saveTasks() {
                 localStorage.setItem(this.storageKey, JSON.stringify(this.tasks));
             }
             
+            saveSettings() {
+                localStorage.setItem(this.settingsKey, JSON.stringify(this.settings));
+            }
+            
+            initializeNotifications() {
+                if ('Notification' in window && this.settings.notifications) {
+                    Notification.requestPermission();
+                }
+            }
+            
             getAllTasks() {
-                return this.tasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                return this.tasks.sort((a, b) => {
+                    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+                    const priorityOrder = { high: 3, medium: 2, low: 1 };
+                    if (a.priority !== b.priority) return (priorityOrder[b.priority] || 1) - (priorityOrder[a.priority] || 1);
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                });
             }
             
             getTasksByCategory(category) {
                 if (category === 'all') return this.getAllTasks();
                 return this.tasks.filter(t => t.category === category)
-                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    .sort((a, b) => {
+                        if (a.completed !== b.completed) return a.completed ? 1 : -1;
+                        const priorityOrder = { high: 3, medium: 2, low: 1 };
+                        if (a.priority !== b.priority) return (priorityOrder[b.priority] || 1) - (priorityOrder[a.priority] || 1);
+                        return new Date(b.createdAt) - new Date(a.createdAt);
+                    });
             }
             
-            addTask(title, url, context, category, deadline) {
+            addTask(title, url, context, category, deadline, time, priority = 'medium', tags = []) {
                 const task = {
                     id: this.nextId++,
                     title,
@@ -65,13 +112,26 @@
                     context,
                     category,
                     deadline: deadline || null,
+                    time: time || null,
+                    priority,
+                    tags: tags || [],
                     completed: false,
                     createdAt: new Date().toISOString(),
-                    completedAt: null
+                    completedAt: null,
+                    reminderSent: false
                 };
                 this.tasks.push(task);
                 this.saveTasks();
                 return task;
+            }
+            
+            updateTask(id, updates) {
+                const taskIndex = this.tasks.findIndex(t => t.id === id);
+                if (taskIndex === -1) return null;
+                
+                this.tasks[taskIndex] = { ...this.tasks[taskIndex], ...updates };
+                this.saveTasks();
+                return this.tasks[taskIndex];
             }
             
             toggleComplete(id) {
@@ -93,21 +153,137 @@
                 const total = this.tasks.length;
                 const completed = this.tasks.filter(t => t.completed).length;
                 const pending = total - completed;
+                const now = new Date();
                 const overdue = this.tasks.filter(t => 
-                    !t.completed && t.deadline && new Date(t.deadline) < new Date()
+                    !t.completed && t.deadline && new Date(t.deadline) < now
                 ).length;
-                return { total, pending, completed, overdue };
+                const today = this.tasks.filter(t => 
+                    !t.completed && t.deadline && 
+                    new Date(t.deadline).toDateString() === now.toDateString()
+                ).length;
+                return { total, pending, completed, overdue, today };
+            }
+            
+            getOverdueTasks() {
+                const now = new Date();
+                return this.tasks.filter(t => 
+                    !t.completed && t.deadline && new Date(t.deadline) < now
+                );
+            }
+            
+            getTodayTasks() {
+                const today = new Date().toDateString();
+                return this.tasks.filter(t => 
+                    !t.completed && t.deadline && 
+                    new Date(t.deadline).toDateString() === today
+                );
+            }
+            
+            checkNotifications() {
+                if (!this.settings.notifications) return;
+                
+                const overdue = this.getOverdueTasks().filter(t => !t.reminderSent);
+                const today = this.getTodayTasks().filter(t => !t.reminderSent);
+                
+                if (overdue.length > 0 || today.length > 0) {
+                    this.sendNotifications(overdue, today);
+                }
+            }
+            
+            sendNotifications(overdue, today) {
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    if (overdue.length > 0) {
+                        new Notification('TaskVault: Overdue Tasks!', {
+                            body: `You have ${overdue.length} overdue task(s)`,
+                            icon: './icon-192.svg'
+                        });
+                    }
+                    if (today.length > 0) {
+                        new Notification('TaskVault: Today\'s Tasks', {
+                            body: `You have ${today.length} task(s) due today`,
+                            icon: './icon-192.svg'
+                        });
+                    }
+                }
+                
+                // Mark as reminded
+                [...overdue, ...today].forEach(task => {
+                    task.reminderSent = true;
+                });
+                this.saveTasks();
+            }
+            
+            exportData() {
+                return JSON.stringify({
+                    tasks: this.tasks,
+                    settings: this.settings,
+                    exported: new Date().toISOString()
+                }, null, 2);
+            }
+            
+            importData(jsonData) {
+                try {
+                    const data = JSON.parse(jsonData);
+                    if (data.tasks && Array.isArray(data.tasks)) {
+                        this.tasks = data.tasks;
+                        this.nextId = Math.max(...this.tasks.map(t => t.id), 0) + 1;
+                        if (data.settings) {
+                            this.settings = { ...this.settings, ...data.settings };
+                        }
+                        this.saveTasks();
+                        this.saveSettings();
+                        return true;
+                    }
+                } catch (error) {
+                    console.error('Import failed:', error);
+                }
+                return false;
             }
         }
         
         const storage = new TaskStorage();
         
+        // Check for shared content on page load
+        function handleSharedContent() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sharedUrl = urlParams.get('url') || urlParams.get('text');
+            const sharedTitle = urlParams.get('title') || '';
+            
+            if (sharedUrl) {
+                // Determine category based on URL
+                let category = 'link';
+                if (sharedUrl.includes('youtube.com') || sharedUrl.includes('youtu.be') || sharedUrl.includes('vimeo.com')) {
+                    category = 'video';
+                } else if (sharedUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                    category = 'image';
+                }
+                
+                const title = sharedTitle || 'Shared content';
+                storage.addTask(title, sharedUrl, 'Shared via web share', category, null, null, 'medium', []);
+                
+                // Clear URL parameters
+                window.history.replaceState({}, document.title, window.location.pathname);
+                
+                return { title, url: sharedUrl, category };
+            }
+            return null;
+        }
+        
         // Header Component
-        function Header({ searchQuery, onSearchChange }) {
+        function Header({ searchQuery, onSearchChange, onShowSettings, hasNotifications }) {
             return e('div', { className: 'bg-white shadow-sm border-b p-4' },
                 e('div', { className: 'flex items-center justify-between mb-4' },
-                    e('h1', { className: 'text-2xl font-bold text-gray-900' }, 'TaskVault'),
-                    e('div', { className: 'text-sm text-gray-500' }, 'Your Secondary Brain')
+                    e('div', { className: 'flex items-center space-x-3' },
+                        e('h1', { className: 'text-2xl font-bold text-gray-900' }, 'TaskVault'),
+                        hasNotifications && e('span', { className: 'notification-dot w-2 h-2 bg-red-500 rounded-full' })
+                    ),
+                    e('div', { className: 'flex items-center space-x-2' },
+                        e('button', {
+                            onClick: onShowSettings,
+                            className: 'p-2 text-gray-500 hover:text-gray-700'
+                        }, '⚙️'),
+                        e('div', { className: 'text-sm text-gray-500' }, 'Your Secondary Brain')
+                    )
                 ),
                 e('input', {
                     type: 'text',
@@ -119,9 +295,9 @@
             );
         }
         
-        // Stats Component
+        // Enhanced Stats Component
         function StatsOverview() {
-            const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0, overdue: 0 });
+            const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0, overdue: 0, today: 0 });
             
             useEffect(() => {
                 setStats(storage.getStats());
@@ -129,22 +305,26 @@
             
             const refreshStats = () => setStats(storage.getStats());
             
-            return e('div', { className: 'p-4 bg-white mx-4 mt-4 rounded-lg shadow-sm grid grid-cols-4 gap-4' },
+            return e('div', { className: 'p-4 bg-white mx-4 mt-4 rounded-lg shadow-sm grid grid-cols-5 gap-2' },
                 e('div', { className: 'text-center' },
-                    e('div', { className: 'text-2xl font-bold text-blue-600' }, stats.total),
-                    e('div', { className: 'text-sm text-gray-500' }, 'Total')
+                    e('div', { className: 'text-lg font-bold text-blue-600' }, stats.total),
+                    e('div', { className: 'text-xs text-gray-500' }, 'Total')
                 ),
                 e('div', { className: 'text-center' },
-                    e('div', { className: 'text-2xl font-bold text-orange-600' }, stats.pending),
-                    e('div', { className: 'text-sm text-gray-500' }, 'Pending')
+                    e('div', { className: 'text-lg font-bold text-orange-600' }, stats.pending),
+                    e('div', { className: 'text-xs text-gray-500' }, 'Pending')
                 ),
                 e('div', { className: 'text-center' },
-                    e('div', { className: 'text-2xl font-bold text-green-600' }, stats.completed),
-                    e('div', { className: 'text-sm text-gray-500' }, 'Done')
+                    e('div', { className: 'text-lg font-bold text-green-600' }, stats.completed),
+                    e('div', { className: 'text-xs text-gray-500' }, 'Done')
                 ),
                 e('div', { className: 'text-center' },
-                    e('div', { className: 'text-2xl font-bold text-red-600' }, stats.overdue),
-                    e('div', { className: 'text-sm text-gray-500' }, 'Overdue')
+                    e('div', { className: 'text-lg font-bold text-purple-600' }, stats.today),
+                    e('div', { className: 'text-xs text-gray-500' }, 'Today')
+                ),
+                e('div', { className: 'text-center' },
+                    e('div', { className: 'text-lg font-bold text-red-600' }, stats.overdue),
+                    e('div', { className: 'text-xs text-gray-500' }, 'Overdue')
                 )
             );
         }
@@ -164,7 +344,7 @@
                     e('button', {
                         key: cat.id,
                         onClick: () => onCategoryChange(cat.id),
-                        className: `flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                        className: `flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                             selectedCategory === cat.id
                                 ? 'bg-blue-500 text-white'
                                 : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
@@ -177,65 +357,109 @@
             );
         }
         
-        // Task Item Component
-        function TaskItem({ task, onToggle, onDelete }) {
-            return e('div', { className: `task-item bg-white rounded-lg shadow-sm border p-4 mb-3 ${task.completed ? 'completed' : ''}` },
+        // Enhanced Task Item Component
+        function TaskItem({ task, onToggle, onDelete, onEdit }) {
+            const isOverdue = task.deadline && !task.completed && new Date(task.deadline) < new Date();
+            const isToday = task.deadline && !task.completed && 
+                new Date(task.deadline).toDateString() === new Date().toDateString();
+            
+            const priorityColors = {
+                high: 'text-red-600 bg-red-100',
+                medium: 'text-yellow-600 bg-yellow-100',
+                low: 'text-green-600 bg-green-100'
+            };
+            
+            return e('div', { 
+                className: `task-item bg-white rounded-lg shadow-sm border p-4 mb-3 priority-${task.priority} ${
+                    task.completed ? 'completed' : ''
+                } ${isOverdue ? 'overdue' : ''}`
+            },
                 e('div', { className: 'flex items-start justify-between' },
                     e('div', { className: 'flex-1' },
-                        e('h3', { className: 'font-medium text-gray-900 mb-1' }, task.title),
+                        e('div', { className: 'flex items-center space-x-2 mb-2' },
+                            e('h3', { className: 'task-title font-medium text-gray-900' }, task.title),
+                            e('span', { 
+                                className: `px-2 py-1 rounded text-xs ${priorityColors[task.priority] || priorityColors.medium}`
+                            }, task.priority?.toUpperCase() || 'MEDIUM')
+                        ),
                         e('p', { className: 'text-gray-600 text-sm mb-2' }, task.context),
                         task.url && e('a', {
                             href: task.url,
                             target: '_blank',
                             rel: 'noopener noreferrer',
-                            className: 'text-blue-500 text-sm hover:underline'
+                            className: 'text-blue-500 text-sm hover:underline block mb-2 truncate'
                         }, task.url),
-                        task.deadline && e('div', { className: 'text-sm text-gray-500 mt-2' },
-                            '⏰ ', new Date(task.deadline).toLocaleDateString()
+                        e('div', { className: 'flex flex-wrap items-center gap-2 mb-2' },
+                            task.deadline && e('div', { 
+                                className: `text-sm ${isOverdue ? 'text-red-600 font-medium' : isToday ? 'text-orange-600 font-medium' : 'text-gray-500'}`
+                            },
+                                '📅 ', new Date(task.deadline).toLocaleDateString(),
+                                task.time && ` ${task.time}`
+                            ),
+                            task.tags && task.tags.map((tag, i) =>
+                                e('span', { 
+                                    key: i, 
+                                    className: 'tag bg-blue-100 text-blue-800'
+                                }, `#${tag}`)
+                            )
                         )
                     ),
-                    e('div', { className: 'flex items-center space-x-2 ml-4' },
+                    e('div', { className: 'flex flex-col items-end space-y-2 ml-4' },
                         e('button', {
                             onClick: () => onToggle(task.id),
-                            className: `px-3 py-1 rounded text-sm ${
+                            className: `px-3 py-1 rounded text-sm transition-colors ${
                                 task.completed
                                     ? 'bg-green-100 text-green-800'
-                                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                                    : 'bg-gray-100 text-gray-800 hover:bg-blue-100 hover:text-blue-800'
                             }`
                         }, task.completed ? '✓ Done' : 'Mark Done'),
-                        e('button', {
-                            onClick: () => onDelete(task.id),
-                            className: 'px-3 py-1 bg-red-100 text-red-800 rounded text-sm hover:bg-red-200'
-                        }, '🗑️')
+                        e('div', { className: 'flex space-x-1' },
+                            e('button', {
+                                onClick: () => onEdit(task),
+                                className: 'px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs hover:bg-blue-200'
+                            }, '✏️'),
+                            e('button', {
+                                onClick: () => onDelete(task.id),
+                                className: 'px-2 py-1 bg-red-100 text-red-800 rounded text-xs hover:bg-red-200'
+                            }, '🗑️')
+                        )
                     )
                 )
             );
         }
         
-        // Add Task Form Component
-        function AddTaskForm({ onAdd, onCancel }) {
-            const [title, setTitle] = useState('');
-            const [url, setUrl] = useState('');
-            const [context, setContext] = useState('');
-            const [category, setCategory] = useState('link');
-            const [deadline, setDeadline] = useState('');
+        // Enhanced Add/Edit Task Form Component
+        function TaskForm({ task, onSave, onCancel }) {
+            const [title, setTitle] = useState(task?.title || '');
+            const [url, setUrl] = useState(task?.url || '');
+            const [context, setContext] = useState(task?.context || '');
+            const [category, setCategory] = useState(task?.category || 'link');
+            const [deadline, setDeadline] = useState(task?.deadline || '');
+            const [time, setTime] = useState(task?.time || '');
+            const [priority, setPriority] = useState(task?.priority || 'medium');
+            const [tagsInput, setTagsInput] = useState(task?.tags?.join(', ') || '');
             
             const handleSubmit = (e) => {
                 e.preventDefault();
                 if (title.trim()) {
-                    onAdd(title.trim(), url.trim(), context.trim(), category, deadline || null);
-                    setTitle('');
-                    setUrl('');
-                    setContext('');
-                    setCategory('link');
-                    setDeadline('');
-                    onCancel();
+                    const tags = tagsInput.split(',').map(t => t.trim()).filter(t => t);
+                    onSave({
+                        ...(task || {}),
+                        title: title.trim(),
+                        url: url.trim() || null,
+                        context: context.trim(),
+                        category,
+                        deadline: deadline || null,
+                        time: time || null,
+                        priority,
+                        tags
+                    });
                 }
             };
             
-            return e('div', { className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50' },
-                e('div', { className: 'bg-white rounded-lg p-6 w-full max-w-md' },
-                    e('h2', { className: 'text-xl font-bold mb-4' }, 'Add New Task'),
+            return e('div', { className: 'modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50' },
+                e('div', { className: 'bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto' },
+                    e('h2', { className: 'text-xl font-bold mb-4' }, task ? 'Edit Task' : 'Add New Task'),
                     e('form', { onSubmit: handleSubmit },
                         e('input', {
                             type: 'text',
@@ -269,18 +493,41 @@
                             e('option', { value: 'image' }, '🖼️ Image'),
                             e('option', { value: 'article' }, '📄 Article')
                         ),
+                        e('select', {
+                            value: priority,
+                            onChange: (e) => setPriority(e.target.value),
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded mb-3 focus:ring-2 focus:ring-blue-500'
+                        },
+                            e('option', { value: 'low' }, '🟢 Low Priority'),
+                            e('option', { value: 'medium' }, '🟡 Medium Priority'),
+                            e('option', { value: 'high' }, '🔴 High Priority')
+                        ),
                         e('input', {
                             type: 'date',
                             placeholder: 'Deadline (optional)',
                             value: deadline,
                             onChange: (e) => setDeadline(e.target.value),
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded mb-3 focus:ring-2 focus:ring-blue-500'
+                        }),
+                        e('input', {
+                            type: 'time',
+                            placeholder: 'Time (optional)',
+                            value: time,
+                            onChange: (e) => setTime(e.target.value),
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded mb-3 focus:ring-2 focus:ring-blue-500'
+                        }),
+                        e('input', {
+                            type: 'text',
+                            placeholder: 'Tags (comma separated)',
+                            value: tagsInput,
+                            onChange: (e) => setTagsInput(e.target.value),
                             className: 'w-full px-3 py-2 border border-gray-300 rounded mb-4 focus:ring-2 focus:ring-blue-500'
                         }),
                         e('div', { className: 'flex space-x-3' },
                             e('button', {
                                 type: 'submit',
                                 className: 'flex-1 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600'
-                            }, 'Add Task'),
+                            }, task ? 'Update Task' : 'Add Task'),
                             e('button', {
                                 type: 'button',
                                 onClick: onCancel,
@@ -292,29 +539,145 @@
             );
         }
         
+        // Settings Modal Component
+        function SettingsModal({ onClose, onExport, onImport }) {
+            const [settings, setSettings] = useState(storage.settings);
+            const fileInputRef = useRef();
+            
+            const handleSave = () => {
+                storage.settings = settings;
+                storage.saveSettings();
+                if (settings.notifications && 'Notification' in window) {
+                    Notification.requestPermission();
+                }
+                onClose();
+            };
+            
+            const handleImport = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const success = storage.importData(e.target.result);
+                        alert(success ? 'Data imported successfully!' : 'Import failed. Please check the file format.');
+                        if (success) window.location.reload();
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            
+            return e('div', { className: 'modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50' },
+                e('div', { className: 'bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto' },
+                    e('h2', { className: 'text-xl font-bold mb-4' }, 'Settings'),
+                    e('div', { className: 'space-y-4' },
+                        e('div', null,
+                            e('label', { className: 'flex items-center space-x-2' },
+                                e('input', {
+                                    type: 'checkbox',
+                                    checked: settings.notifications,
+                                    onChange: (e) => setSettings({...settings, notifications: e.target.checked})
+                                }),
+                                e('span', null, 'Enable notifications')
+                            )
+                        ),
+                        e('div', null,
+                            e('label', { className: 'block text-sm font-medium mb-1' }, 'Notification time'),
+                            e('input', {
+                                type: 'time',
+                                value: settings.notificationTime,
+                                onChange: (e) => setSettings({...settings, notificationTime: e.target.value}),
+                                className: 'w-full px-3 py-2 border border-gray-300 rounded'
+                            })
+                        ),
+                        e('div', { className: 'border-t pt-4' },
+                            e('h3', { className: 'font-medium mb-2' }, 'Data Management'),
+                            e('div', { className: 'space-y-2' },
+                                e('button', {
+                                    onClick: onExport,
+                                    className: 'w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600'
+                                }, 'Export Data'),
+                                e('button', {
+                                    onClick: () => fileInputRef.current?.click(),
+                                    className: 'w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600'
+                                }, 'Import Data'),
+                                e('input', {
+                                    ref: fileInputRef,
+                                    type: 'file',
+                                    accept: '.json',
+                                    onChange: handleImport,
+                                    style: { display: 'none' }
+                                })
+                            )
+                        )
+                    ),
+                    e('div', { className: 'flex space-x-3 mt-6' },
+                        e('button', {
+                            onClick: handleSave,
+                            className: 'flex-1 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600'
+                        }, 'Save'),
+                        e('button', {
+                            onClick: onClose,
+                            className: 'flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400'
+                        }, 'Cancel')
+                    )
+                )
+            );
+        }
+        
         // Main App Component
         function App() {
             const [tasks, setTasks] = useState([]);
             const [searchQuery, setSearchQuery] = useState('');
             const [selectedCategory, setSelectedCategory] = useState('all');
-            const [showAddForm, setShowAddForm] = useState(false);
+            const [showTaskForm, setShowTaskForm] = useState(false);
+            const [editingTask, setEditingTask] = useState(null);
+            const [showSettings, setShowSettings] = useState(false);
+            const [sharedContent, setSharedContent] = useState(null);
             
             const refreshTasks = () => {
                 setTasks(storage.getTasksByCategory(selectedCategory));
             };
             
             useEffect(() => {
+                const shared = handleSharedContent();
+                if (shared) {
+                    setSharedContent(shared);
+                    setTimeout(() => setSharedContent(null), 3000);
+                }
                 refreshTasks();
+                
+                // Check notifications periodically
+                const notificationInterval = setInterval(() => {
+                    storage.checkNotifications();
+                }, 60000); // Check every minute
+                
+                return () => clearInterval(notificationInterval);
             }, [selectedCategory]);
             
             const filteredTasks = tasks.filter(task =>
                 task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                task.context.toLowerCase().includes(searchQuery.toLowerCase())
+                task.context.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (task.tags && task.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())))
             );
             
-            const handleAddTask = (title, url, context, category, deadline) => {
-                storage.addTask(title, url, context, category, deadline);
+            const handleSaveTask = (taskData) => {
+                if (editingTask) {
+                    storage.updateTask(editingTask.id, taskData);
+                } else {
+                    storage.addTask(
+                        taskData.title,
+                        taskData.url,
+                        taskData.context,
+                        taskData.category,
+                        taskData.deadline,
+                        taskData.time,
+                        taskData.priority,
+                        taskData.tags
+                    );
+                }
                 refreshTasks();
+                setShowTaskForm(false);
+                setEditingTask(null);
             };
             
             const handleToggleTask = (id) => {
@@ -329,27 +692,52 @@
                 }
             };
             
-            return e('div', { className: 'min-h-screen bg-gray-50' },
-                e(Header, { searchQuery, onSearchChange: setSearchQuery }),
+            const handleEditTask = (task) => {
+                setEditingTask(task);
+                setShowTaskForm(true);
+            };
+            
+            const handleExport = () => {
+                const data = storage.exportData();
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `taskvault-backup-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+            
+            const overdueTasks = storage.getOverdueTasks();
+            const todayTasks = storage.getTodayTasks();
+            const hasNotifications = overdueTasks.length > 0 || todayTasks.length > 0;
+            
+            return e('div', { className: 'min-h-screen bg-gray-50 pb-20' },
+                e(Header, { 
+                    searchQuery, 
+                    onSearchChange: setSearchQuery,
+                    onShowSettings: () => setShowSettings(true),
+                    hasNotifications
+                }),
+                
+                // Shared content notification
+                sharedContent && e('div', { className: 'mx-4 mt-4 p-3 bg-green-100 border border-green-300 rounded-lg' },
+                    e('p', { className: 'text-green-800 text-sm' },
+                        `✅ Added shared ${sharedContent.category}: "${sharedContent.title}"`
+                    )
+                ),
+                
                 e(StatsOverview),
                 e(CategoryTabs, { selectedCategory, onCategoryChange: setSelectedCategory }),
                 
-                // Add Task Button
-                e('div', { className: 'p-4' },
-                    e('button', {
-                        onClick: () => setShowAddForm(true),
-                        className: 'w-full bg-blue-500 text-white py-3 px-4 rounded-lg text-center font-medium hover:bg-blue-600'
-                    }, '+ Add New Task')
-                ),
-                
                 // Task List
-                e('div', { className: 'px-4 pb-20' },
+                e('div', { className: 'px-4' },
                     filteredTasks.length === 0
                         ? e('div', { className: 'text-center text-gray-500 py-8' },
                             searchQuery
                                 ? 'No tasks match your search.'
                                 : selectedCategory === 'all'
-                                    ? 'No tasks yet. Add your first task above!'
+                                    ? 'No tasks yet. Add your first task!'
                                     : `No ${selectedCategory} tasks yet.`
                         )
                         : filteredTasks.map(task =>
@@ -357,32 +745,43 @@
                                 key: task.id,
                                 task,
                                 onToggle: handleToggleTask,
-                                onDelete: handleDeleteTask
+                                onDelete: handleDeleteTask,
+                                onEdit: handleEditTask
                             })
                         )
                 ),
                 
-                // Add Task Form Modal
-                showAddForm && e(AddTaskForm, {
-                    onAdd: handleAddTask,
-                    onCancel: () => setShowAddForm(false)
+                // Floating Add Button
+                e('button', {
+                    onClick: () => setShowTaskForm(true),
+                    className: 'floating-add w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 flex items-center justify-center text-2xl'
+                }, '+'),
+                
+                // Modals
+                (showTaskForm || editingTask) && e(TaskForm, {
+                    task: editingTask,
+                    onSave: handleSaveTask,
+                    onCancel: () => {
+                        setShowTaskForm(false);
+                        setEditingTask(null);
+                    }
+                }),
+                
+                showSettings && e(SettingsModal, {
+                    onClose: () => setShowSettings(false),
+                    onExport: handleExport,
+                    onImport: () => {} // Handled in component
                 })
             );
         }
         
+        // Register as PWA share target
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js');
+        }
+        
         // Render the app
         ReactDOM.render(e(App), document.getElementById('root'));
-    </script>
-    
-    <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(registration => console.log('SW registered'))
-                    .catch(error => console.log('SW registration failed'));
-            });
-        }
     </script>
 </body>
 </html>

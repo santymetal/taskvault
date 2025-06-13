@@ -1,34 +1,64 @@
 {
   "name": "TaskVault - Your Secondary Brain",
   "short_name": "TaskVault",
-  "description": "Organize links, videos, images and articles with deadline tracking",
+  "description": "Store and organize links, images, and contextual information with deadline tracking",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f9fafb",
+  "background_color": "#ffffff",
   "theme_color": "#1E90FF",
   "orientation": "portrait-primary",
   "categories": ["productivity", "utilities"],
+  "lang": "en",
+  "dir": "ltr",
+  "scope": "/",
   "icons": [
     {
-      "src": "/icon-192.svg",
+      "src": "./icon-192.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512.svg", 
-      "sizes": "512x512",
+      "src": "./icon-512.svg",
+      "sizes": "512x512", 
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ],
   "share_target": {
-    "action": "/share",
+    "action": "/",
     "method": "GET",
     "params": {
       "title": "title",
       "text": "text",
       "url": "url"
     }
-  }
+  },
+  "shortcuts": [
+    {
+      "name": "Add Quick Task",
+      "short_name": "Add Task",
+      "description": "Quickly add a new task",
+      "url": "/?action=add",
+      "icons": [
+        {
+          "src": "./icon-192.svg",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "View Today's Tasks",
+      "short_name": "Today",
+      "description": "View tasks due today",
+      "url": "/?filter=today",
+      "icons": [
+        {
+          "src": "./icon-192.svg", 
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false
 }
