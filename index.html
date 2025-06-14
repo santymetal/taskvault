@@ -23,8 +23,6 @@
         .priority-medium { border-left: 4px solid #f59e0b; }
         .priority-low { border-left: 4px solid #10b981; }
         .overdue { background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%); border-color: #fca5a5; }
-        .notification-dot { animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .modal-backdrop { backdrop-filter: blur(4px); }
         .tag { display: inline-block; padding: 2px 8px; margin: 2px; border-radius: 12px; font-size: 12px; }
         .floating-add { position: fixed; bottom: 20px; right: 20px; z-index: 50; }
@@ -32,6 +30,7 @@
         .recording { animation: recordPulse 1s infinite; }
         @keyframes recordPulse { 0%, 100% { background-color: #ef4444; } 50% { background-color: #dc2626; } }
         .share-notification { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 70; }
+        .debug-info { position: fixed; top: 10px; right: 10px; background: #f0f0f0; padding: 10px; border-radius: 5px; font-size: 12px; max-width: 300px; z-index: 100; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -40,19 +39,16 @@
     <script>
         const { useState, useEffect, createElement: e, useRef } = React;
         
-        // Enhanced Local Storage Manager with better sharing
+        // Enhanced Local Storage Manager
         class TaskStorage {
             constructor() {
                 this.storageKey = 'taskvault-tasks';
                 this.settingsKey = 'taskvault-settings';
                 this.undoKey = 'taskvault-undo';
-                this.shareKey = 'taskvault-shared';
                 this.tasks = this.loadTasks();
                 this.settings = this.loadSettings();
                 this.undoStack = this.loadUndoStack();
                 this.nextId = Math.max(...this.tasks.map(t => t.id), 0) + 1;
-                this.initializeNotifications();
-                this.startNotificationTimer();
             }
             
             loadTasks() {
@@ -67,19 +63,9 @@
             loadSettings() {
                 try {
                     const stored = localStorage.getItem(this.settingsKey);
-                    return stored ? JSON.parse(stored) : {
-                        notifications: false,
-                        notificationTime: '09:00',
-                        safariNotifications: false,
-                        lastNotificationCheck: null
-                    };
+                    return stored ? JSON.parse(stored) : {};
                 } catch (error) {
-                    return { 
-                        notifications: false, 
-                        notificationTime: '09:00', 
-                        safariNotifications: false,
-                        lastNotificationCheck: null
-                    };
+                    return {};
                 }
             }
             
@@ -112,94 +98,6 @@
                     timestamp: Date.now()
                 });
                 this.saveUndoStack();
-            }
-            
-            // Safari-compatible notification system
-            async initializeNotifications() {
-                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-                
-                if (isSafari) {
-                    // For Safari, use timer-based notifications
-                    this.settings.safariNotifications = this.settings.notifications;
-                } else if ('Notification' in window && this.settings.notifications) {
-                    const permission = await Notification.requestPermission();
-                    this.settings.notificationPermission = permission === 'granted';
-                    this.saveSettings();
-                }
-            }
-            
-            startNotificationTimer() {
-                // Check every 30 seconds for better responsiveness
-                setInterval(() => {
-                    this.checkAndSendNotifications();
-                }, 30000);
-                
-                // Initial check after 3 seconds
-                setTimeout(() => {
-                    this.checkAndSendNotifications();
-                }, 3000);
-            }
-            
-            checkAndSendNotifications() {
-                if (!this.settings.notifications) return;
-                
-                const now = new Date();
-                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-                
-                const overdue = this.tasks.filter(t => 
-                    !t.completed && !t.notificationSent && t.deadline && new Date(t.deadline) < now
-                );
-                
-                if (overdue.length > 0) {
-                    if (isSafari || !('Notification' in window)) {
-                        // Safari fallback - show in-page notification
-                        this.showInPageNotification(`⚠️ ${overdue.length} overdue task(s): ${overdue[0].title}${overdue.length > 1 ? ' and others' : ''}`);
-                    } else if (Notification.permission === 'granted') {
-                        new Notification('TaskVault: Overdue Tasks!', {
-                            body: `You have ${overdue.length} overdue task(s): ${overdue[0].title}${overdue.length > 1 ? ' and others' : ''}`,
-                            icon: './icon-192.svg',
-                            requireInteraction: true
-                        });
-                    }
-                    
-                    overdue.forEach(task => {
-                        task.notificationSent = true;
-                    });
-                    this.saveTasks();
-                }
-                
-                // Daily notifications
-                const notificationTime = this.settings.notificationTime || '09:00';
-                const [hour, minute] = notificationTime.split(':').map(Number);
-                const lastCheck = this.settings.lastNotificationCheck ? new Date(this.settings.lastNotificationCheck) : null;
-                
-                if (now.getHours() === hour && now.getMinutes() === minute && 
-                    (!lastCheck || lastCheck.toDateString() !== now.toDateString())) {
-                    
-                    const todayTasks = this.tasks.filter(t => 
-                        !t.completed && t.deadline && 
-                        new Date(t.deadline).toDateString() === now.toDateString()
-                    );
-                    
-                    if (todayTasks.length > 0) {
-                        if (isSafari || !('Notification' in window)) {
-                            this.showInPageNotification(`📅 ${todayTasks.length} task(s) due today: ${todayTasks[0].title}${todayTasks.length > 1 ? ' and others' : ''}`);
-                        } else if (Notification.permission === 'granted') {
-                            new Notification('TaskVault: Today\'s Tasks', {
-                                body: `You have ${todayTasks.length} task(s) due today: ${todayTasks[0].title}${todayTasks.length > 1 ? ' and others' : ''}`,
-                                icon: './icon-192.svg'
-                            });
-                        }
-                    }
-                    
-                    this.settings.lastNotificationCheck = now.toISOString();
-                    this.saveSettings();
-                }
-            }
-            
-            showInPageNotification(message) {
-                // Dispatch custom event for in-page notifications
-                window.dispatchEvent(new CustomEvent('taskvault-notification', { detail: message }));
             }
             
             getAllTasks() {
@@ -235,9 +133,7 @@
                     tags: tags || [],
                     completed: false,
                     createdAt: new Date().toISOString(),
-                    completedAt: null,
-                    notificationSent: false,
-                    todayNotificationSent: false
+                    completedAt: null
                 };
                 this.tasks.push(task);
                 this.addToUndoStack('ADD_TASK', { task: { ...task } });
@@ -356,18 +252,47 @@
         
         const storage = new TaskStorage();
         
-        // Enhanced shared content handler
+        // Enhanced shared content handler with extensive debugging
         function handleSharedContent() {
-            // Check for URL parameters (from web share)
             const urlParams = new URLSearchParams(window.location.search);
+            const urlHash = window.location.hash;
+            const urlPath = window.location.pathname;
             
-            // Try different parameter names that browsers might use
-            const sharedUrl = urlParams.get('url') || urlParams.get('text') || urlParams.get('u');
-            const sharedTitle = urlParams.get('title') || urlParams.get('subject') || '';
+            // Log everything for debugging
+            const debugInfo = {
+                fullUrl: window.location.href,
+                search: window.location.search,
+                hash: urlHash,
+                pathname: urlPath,
+                allParams: Object.fromEntries(urlParams.entries())
+            };
             
-            console.log('Checking for shared content:', { sharedUrl, sharedTitle, allParams: [...urlParams.entries()] });
+            console.log('🔍 Web Share Debug Info:', debugInfo);
+            
+            // Try multiple ways to get shared content
+            const possibleUrls = [
+                urlParams.get('url'),
+                urlParams.get('text'), 
+                urlParams.get('u'),
+                urlParams.get('link'),
+                urlParams.get('href')
+            ].filter(Boolean);
+            
+            const possibleTitles = [
+                urlParams.get('title'),
+                urlParams.get('subject'),
+                urlParams.get('name')
+            ].filter(Boolean);
+            
+            console.log('🔍 Found URLs:', possibleUrls);
+            console.log('🔍 Found Titles:', possibleTitles);
+            
+            const sharedUrl = possibleUrls[0];
+            const sharedTitle = possibleTitles[0];
             
             if (sharedUrl) {
+                console.log('✅ Processing shared URL:', sharedUrl);
+                
                 // Determine category based on URL
                 let category = 'link';
                 const lowerUrl = sharedUrl.toLowerCase();
@@ -394,6 +319,8 @@
                     }
                 }
                 
+                console.log('✅ Creating task:', { title, url: sharedUrl, category });
+                
                 // Add the task
                 const task = storage.addTask(
                     title, 
@@ -409,12 +336,19 @@
                 // Clear URL parameters after processing
                 window.history.replaceState({}, document.title, window.location.pathname);
                 
-                console.log('Created task from shared content:', task);
+                console.log('✅ Task created successfully:', task);
                 
-                return { title, url: sharedUrl, category, task };
+                return { 
+                    title, 
+                    url: sharedUrl, 
+                    category, 
+                    task,
+                    debugInfo 
+                };
+            } else {
+                console.log('❌ No shared URL found in parameters');
+                return { debugInfo };
             }
-            
-            return null;
         }
         
         // Voice Recognition Component
@@ -472,18 +406,16 @@
             }, isListening ? '🎤 Stop' : '🎤 Speak');
         }
         
-        // In-page notification component for Safari
-        function InPageNotification({ message, onDismiss }) {
-            if (!message) return null;
+        // Debug Info Component
+        function DebugInfo({ debugInfo, show }) {
+            if (!show || !debugInfo) return null;
             
-            return e('div', { className: 'share-notification bg-orange-100 border border-orange-300 text-orange-800 px-4 py-3 rounded-lg shadow-lg max-w-sm' },
-                e('div', { className: 'flex items-center justify-between' },
-                    e('span', { className: 'text-sm font-medium' }, message),
-                    e('button', {
-                        onClick: onDismiss,
-                        className: 'ml-2 text-orange-600 hover:text-orange-800'
-                    }, '×')
-                )
+            return e('div', { className: 'debug-info' },
+                e('div', { className: 'font-bold mb-2' }, 'Web Share Debug:'),
+                e('div', null, `URL: ${debugInfo.fullUrl || 'none'}`),
+                e('div', null, `Search: ${debugInfo.search || 'none'}`),
+                e('div', null, `Params: ${JSON.stringify(debugInfo.allParams || {})}`),
+                e('div', null, `Hash: ${debugInfo.hash || 'none'}`)
             );
         }
         
@@ -512,14 +444,17 @@
         }
         
         // Header Component
-        function Header({ searchQuery, onSearchChange, onShowSettings, hasNotifications }) {
+        function Header({ searchQuery, onSearchChange, onShowSettings, onToggleDebug, showDebug }) {
             return e('div', { className: 'bg-white shadow-sm border-b p-4' },
                 e('div', { className: 'flex items-center justify-between mb-4' },
                     e('div', { className: 'flex items-center space-x-3' },
-                        e('h1', { className: 'text-2xl font-bold text-gray-900' }, 'TaskVault'),
-                        hasNotifications && e('span', { className: 'notification-dot w-2 h-2 bg-red-500 rounded-full' })
+                        e('h1', { className: 'text-2xl font-bold text-gray-900' }, 'TaskVault')
                     ),
                     e('div', { className: 'flex items-center space-x-2' },
+                        e('button', {
+                            onClick: onToggleDebug,
+                            className: `p-2 text-xs ${showDebug ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700'}`
+                        }, 'Debug'),
                         e('button', {
                             onClick: onShowSettings,
                             className: 'p-2 text-gray-500 hover:text-gray-700'
@@ -537,7 +472,7 @@
             );
         }
         
-        // Enhanced Stats Component
+        // Stats Component
         function StatsOverview() {
             const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0, overdue: 0, today: 0 });
             
@@ -597,7 +532,7 @@
             );
         }
         
-        // Enhanced Task Item Component
+        // Task Item Component
         function TaskItem({ task, onToggle, onDelete, onEdit }) {
             const isOverdue = task.deadline && !task.completed && new Date(task.deadline) < new Date();
             const isToday = task.deadline && !task.completed && 
@@ -668,7 +603,7 @@
             );
         }
         
-        // Enhanced Add/Edit Task Form Component
+        // Task Form Component
         function TaskForm({ task, onSave, onCancel }) {
             const [title, setTitle] = useState(task?.title || '');
             const [url, setUrl] = useState(task?.url || '');
@@ -807,44 +742,9 @@
             );
         }
         
-        // Settings Modal Component - Safari compatible
+        // Settings Modal Component
         function SettingsModal({ onClose, onExport, onImport }) {
-            const [settings, setSettings] = useState(storage.settings);
-            const [permissionStatus, setPermissionStatus] = useState('default');
             const fileInputRef = useRef();
-            
-            useEffect(() => {
-                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-                if (isSafari) {
-                    setPermissionStatus('safari');
-                } else if ('Notification' in window) {
-                    setPermissionStatus(Notification.permission);
-                }
-            }, []);
-            
-            const handleNotificationToggle = async (enabled) => {
-                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-                
-                if (enabled) {
-                    if (isSafari) {
-                        setSettings({...settings, notifications: true, safariNotifications: true});
-                    } else if ('Notification' in window) {
-                        const permission = await Notification.requestPermission();
-                        setPermissionStatus(permission);
-                        setSettings({...settings, notifications: permission === 'granted', notificationPermission: permission === 'granted'});
-                    } else {
-                        setSettings({...settings, notifications: true});
-                    }
-                } else {
-                    setSettings({...settings, notifications: false});
-                }
-            };
-            
-            const handleSave = () => {
-                storage.settings = settings;
-                storage.saveSettings();
-                onClose();
-            };
             
             const handleImport = (e) => {
                 const file = e.target.files[0];
@@ -859,37 +759,10 @@
                 }
             };
             
-            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-            
             return e('div', { className: 'modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50' },
                 e('div', { className: 'bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto' },
                     e('h2', { className: 'text-xl font-bold mb-4' }, 'Settings'),
                     e('div', { className: 'space-y-4' },
-                        e('div', null,
-                            e('label', { className: 'flex items-center space-x-2' },
-                                e('input', {
-                                    type: 'checkbox',
-                                    checked: settings.notifications,
-                                    onChange: (e) => handleNotificationToggle(e.target.checked)
-                                }),
-                                e('span', null, 'Enable notifications'),
-                                isSafari && settings.notifications && 
-                                e('span', { className: 'text-xs text-green-600' }, '(In-page notifications)')
-                            ),
-                            !isSafari && permissionStatus !== 'granted' && settings.notifications && 
-                            e('p', { className: 'text-xs text-red-500 mt-1' }, 'Browser permission required')
-                        ),
-                        settings.notifications && e('div', null,
-                            e('label', { className: 'block text-sm font-medium mb-1' }, 'Daily notification time'),
-                            e('input', {
-                                type: 'time',
-                                value: settings.notificationTime,
-                                onChange: (e) => setSettings({...settings, notificationTime: e.target.value}),
-                                className: 'w-full px-3 py-2 border border-gray-300 rounded'
-                            }),
-                            isSafari && e('p', { className: 'text-xs text-gray-500 mt-1' }, 
-                                'Notifications will appear on the page when you visit TaskVault')
-                        ),
                         e('div', { className: 'border-t pt-4' },
                             e('h3', { className: 'font-medium mb-2' }, 'Data Management'),
                             e('div', { className: 'space-y-2' },
@@ -913,13 +786,9 @@
                     ),
                     e('div', { className: 'flex space-x-3 mt-6' },
                         e('button', {
-                            onClick: handleSave,
-                            className: 'flex-1 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600'
-                        }, 'Save'),
-                        e('button', {
                             onClick: onClose,
                             className: 'flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400'
-                        }, 'Cancel')
+                        }, 'Close')
                     )
                 )
             );
@@ -935,7 +804,8 @@
             const [showSettings, setShowSettings] = useState(false);
             const [sharedContent, setSharedContent] = useState(null);
             const [undoToast, setUndoToast] = useState({ show: false, action: null, text: '' });
-            const [inPageNotification, setInPageNotification] = useState('');
+            const [showDebug, setShowDebug] = useState(false);
+            const [debugInfo, setDebugInfo] = useState(null);
             
             const refreshTasks = () => {
                 setTasks(storage.getTasksByCategory(selectedCategory));
@@ -946,22 +816,11 @@
                 const shared = handleSharedContent();
                 if (shared) {
                     setSharedContent(shared);
-                    setTimeout(() => setSharedContent(null), 5000); // Show longer for shared content
+                    setDebugInfo(shared.debugInfo);
+                    setTimeout(() => setSharedContent(null), 8000);
                 }
                 
                 refreshTasks();
-                
-                // Listen for in-page notifications (Safari fallback)
-                const handleNotification = (event) => {
-                    setInPageNotification(event.detail);
-                    setTimeout(() => setInPageNotification(''), 8000);
-                };
-                
-                window.addEventListener('taskvault-notification', handleNotification);
-                
-                return () => {
-                    window.removeEventListener('taskvault-notification', handleNotification);
-                };
             }, [selectedCategory]);
             
             const filteredTasks = tasks.filter(task =>
@@ -1035,35 +894,34 @@
                 URL.revokeObjectURL(url);
             };
             
-            const overdueTasks = storage.tasks.filter(t => 
-                !t.completed && t.deadline && new Date(t.deadline) < new Date()
-            );
-            const todayTasks = storage.tasks.filter(t => 
-                !t.completed && t.deadline && 
-                new Date(t.deadline).toDateString() === new Date().toDateString()
-            );
-            const hasNotifications = overdueTasks.length > 0 || todayTasks.length > 0;
-            
             return e('div', { className: 'min-h-screen bg-gray-50 pb-20' },
                 e(Header, { 
                     searchQuery, 
                     onSearchChange: setSearchQuery,
                     onShowSettings: () => setShowSettings(true),
-                    hasNotifications
+                    onToggleDebug: () => setShowDebug(!showDebug),
+                    showDebug
                 }),
                 
-                // In-page notification for Safari
-                inPageNotification && e(InPageNotification, {
-                    message: inPageNotification,
-                    onDismiss: () => setInPageNotification('')
-                }),
+                // Debug info
+                e(DebugInfo, { debugInfo, show: showDebug }),
                 
                 // Shared content notification
-                sharedContent && e('div', { className: 'mx-4 mt-4 p-3 bg-green-100 border border-green-300 rounded-lg' },
+                sharedContent && sharedContent.task && e('div', { className: 'mx-4 mt-4 p-3 bg-green-100 border border-green-300 rounded-lg' },
                     e('p', { className: 'text-green-800 text-sm font-medium' },
                         `✅ Added shared ${sharedContent.category}: "${sharedContent.title}"`
                     ),
                     sharedContent.url && e('p', { className: 'text-green-700 text-xs mt-1 truncate' }, sharedContent.url)
+                ),
+                
+                // No shared content found warning
+                sharedContent && !sharedContent.task && debugInfo && e('div', { className: 'mx-4 mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg' },
+                    e('p', { className: 'text-yellow-800 text-sm font-medium' },
+                        '⚠️ Web share opened TaskVault but no URL was detected in parameters'
+                    ),
+                    e('p', { className: 'text-yellow-700 text-xs mt-1' }, 
+                        'Check debug info (top right) or browser console for details'
+                    )
                 ),
                 
                 e(StatsOverview),
