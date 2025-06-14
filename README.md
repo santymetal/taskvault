@@ -1,44 +1,70 @@
-# TaskVault with iPhone Shortcuts Support
+# TaskVault
 
-## iPhone Shortcut Integration
+**TaskVault** is a minimal personal task manager designed to collect, store, and manage links or URLs as actionable tasks.
 
-TaskVault now supports URLs in the format: `https://your-site.github.io/taskvault/?task=<encoded-url>`
+---
 
-### Supported URL Parameters:
-- `?task=<url>` - Your iPhone shortcut format
-- `?url=<url>` - Standard web share format
-- `?text=<url>` - Alternative format
-- `?u=<url>` - Short parameter format
+## 🔥 Features
 
-### Features:
-- Automatic URL decoding for encoded parameters
-- Detects iPhone shortcut vs web share source
-- Shows appropriate success message
-- Tags tasks with "shortcut" or "shared" automatically
-- Auto-categorizes content (videos, articles, images, links)
+- ✅ Add any link (Twitter, YouTube, Medium, etc.) as a task.
+- ✅ Paste from clipboard to add links manually.
+- ✅ Semi-automated iOS Shortcut integration.
+- ✅ Hosted on GitHub Pages.
+- ✅ Works fully offline (PWA enabled).
+- ✅ Clean, distraction-free interface.
 
-### How Your iPhone Shortcut Should Work:
+---
 
-1. **Get Clipboard/Shared URL**
-2. **Encode URL** (if needed): Use "Encode URL" action
-3. **Open URL**: `https://santymetal.github.io/taskvault/?task=` + encoded URL
+## 🔗 iOS Automation Flow
 
-### Example URLs That Work:
-- `https://santymetal.github.io/taskvault/?task=https%3A//youtube.com/watch%3Fv%3D123`
-- `https://santymetal.github.io/taskvault/?task=https://twitter.com/status/123`
-- `https://santymetal.github.io/taskvault/?url=https://example.com`
+You can fully automate link collection using iOS Shortcuts:
 
-### Testing Your Shortcut:
-1. Copy any URL in Safari
-2. Run your shortcut
-3. TaskVault should open and automatically create a task
-4. Look for green success message: "✅ Added via iPhone shortcut"
+### Step 1: Create a Shortcut
 
-### Benefits:
-- One-tap task creation from any app
-- Automatic categorization and tagging
-- Works offline (saves to local storage)
-- No manual typing required
-- Perfect for capturing content on the go
+- Read Clipboard
+- If Clipboard contains `https://`
+- Encode URL (Clipboard)
+- Set Variable `EncodedTask` to Encoded URL
+- Open URL: `https://santymetal.github.io/taskvault/?task=EncodedTask`
 
-The app will automatically decode URL-encoded parameters and create tasks with proper metadata.
+### Step 2: Create Automation
+
+- Trigger: App Open → Apps like Safari, Twitter, YouTube
+- Action: Run the above shortcut
+- Disable: "Ask Before Running"
+
+🎯 Now, whenever you copy a link and open any supported app, TaskVault auto-launches with the link added.
+
+---
+
+## 💡 Internals
+
+- TaskVault accepts new tasks via query params:
+  
+
+- `main.js` parses the URL on load and automatically adds the task.
+
+---
+
+## 📦 Hosting
+
+The app is completely hosted using GitHub Pages:
+
+👉 [TaskVault Live App](https://santymetal.github.io/taskvault/)
+
+---
+
+## 🚀 Future Plans
+
+- Notifications (once browser API permits PWA notifications on iOS)
+- Web Share Target API integration
+- Cross-device sync via local backend (optional)
+- Share extension for faster task creation
+
+---
+
+## 🙌 Credits
+
+Built by [Santosh](https://github.com/santymetal).
+
+---
