@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TaskVault - Your Secondary Brain</title>
-    <meta name="description" content="Store and organize links, images, and contextual information with deadline tracking">
+    <title>TaskVault Ultimate - Professional Productivity System</title>
+    <meta name="description" content="Ultimate productivity system with advanced automation, goal tracking, and performance optimization">
     <meta name="theme-color" content="#1E90FF">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="TaskVault">
+    <meta name="apple-mobile-web-app-title" content="TaskVault Ultimate">
     <link rel="manifest" href="./manifest.json">
+    <link rel="icon" href="./icon-192.svg" type="image/svg+xml">
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -29,28 +30,65 @@
         .undo-toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 60; }
         .recording { animation: recordPulse 1s infinite; }
         @keyframes recordPulse { 0%, 100% { background-color: #ef4444; } 50% { background-color: #dc2626; } }
-        .share-notification { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 70; }
-        .debug-info { position: fixed; top: 10px; right: 10px; background: #f0f0f0; padding: 10px; border-radius: 5px; font-size: 12px; max-width: 300px; z-index: 100; }
+        
+        /* Advanced styling */
+        .automation-rule { background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%); border-left: 4px solid #0ea5e9; }
+        .goal-progress { background: conic-gradient(from 0deg, #10b981 0deg, #10b981 var(--progress, 0deg), #e5e7eb var(--progress, 0deg)); }
+        .burndown-chart { background: linear-gradient(135deg, #fef3c7 0%, #ffffff 100%); }
+        .time-tracking { background: linear-gradient(135deg, #ede9fe 0%, #ffffff 100%); }
+        .productivity-heatmap { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; }
+        .heatmap-cell { aspect-ratio: 1; border-radius: 2px; }
+        .intensity-0 { background: #f3f4f6; }
+        .intensity-1 { background: #dbeafe; }
+        .intensity-2 { background: #93c5fd; }
+        .intensity-3 { background: #3b82f6; }
+        .intensity-4 { background: #1d4ed8; }
+        .kanban-column { min-height: 400px; background: #f8fafc; border-radius: 8px; }
+        .kanban-card { background: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .velocity-chart { background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%); }
+        .milestone-indicator { background: linear-gradient(45deg, #fbbf24, #f59e0b); }
+        .collaboration-avatar { border: 2px solid #3b82f6; border-radius: 50%; }
+        .smart-suggestion { background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); border-left: 4px solid #22c55e; }
+        .focus-mode-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; }
+        .focus-mode-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .recurring-pattern { background: conic-gradient(from 0deg, #8b5cf6, #ec4899, #8b5cf6); }
+        .dependency-graph { position: relative; }
+        .dependency-line { position: absolute; border-top: 2px dashed #6b7280; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div id="root"></div>
     
     <script>
-        const { useState, useEffect, createElement: e, useRef } = React;
+        const { useState, useEffect, createElement: e, useRef, useMemo, useCallback } = React;
         
-        // Enhanced Local Storage Manager
-        class TaskStorage {
+        // Ultimate Task Storage with Professional Features
+        class TaskStorageUltimate {
             constructor() {
-                this.storageKey = 'taskvault-tasks';
-                this.settingsKey = 'taskvault-settings';
-                this.undoKey = 'taskvault-undo';
+                this.storageKey = 'taskvault-ultimate-tasks';
+                this.settingsKey = 'taskvault-ultimate-settings';
+                this.undoKey = 'taskvault-ultimate-undo';
+                this.analyticsKey = 'taskvault-ultimate-analytics';
+                this.goalsKey = 'taskvault-ultimate-goals';
+                this.automationKey = 'taskvault-ultimate-automation';
+                this.timeTrackingKey = 'taskvault-ultimate-timetracking';
+                this.milestonesKey = 'taskvault-ultimate-milestones';
+                
                 this.tasks = this.loadTasks();
                 this.settings = this.loadSettings();
                 this.undoStack = this.loadUndoStack();
+                this.analytics = this.loadAnalytics();
+                this.goals = this.loadGoals();
+                this.automationRules = this.loadAutomationRules();
+                this.timeEntries = this.loadTimeEntries();
+                this.milestones = this.loadMilestones();
+                
                 this.nextId = Math.max(...this.tasks.map(t => t.id), 0) + 1;
+                this.initializeDefaults();
+                this.startAutomationEngine();
             }
             
+            // Load methods
             loadTasks() {
                 try {
                     const stored = localStorage.getItem(this.storageKey);
@@ -63,9 +101,83 @@
             loadSettings() {
                 try {
                     const stored = localStorage.getItem(this.settingsKey);
-                    return stored ? JSON.parse(stored) : {};
+                    return stored ? JSON.parse(stored) : {
+                        workingHours: { start: '09:00', end: '17:00' },
+                        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        autoTimeTracking: true,
+                        focusMode: false,
+                        smartNotifications: true,
+                        performanceOptimization: true,
+                        weeklyGoals: {
+                            tasksCompleted: 25,
+                            hoursWorked: 35,
+                            productivityScore: 80
+                        },
+                        monthlyGoals: {
+                            projectsCompleted: 2,
+                            skillsLearned: 1,
+                            efficiencyGain: 10
+                        }
+                    };
                 } catch (error) {
                     return {};
+                }
+            }
+            
+            loadAnalytics() {
+                try {
+                    const stored = localStorage.getItem(this.analyticsKey);
+                    return stored ? JSON.parse(stored) : {
+                        dailyProductivity: {},
+                        hourlyHeatmap: {},
+                        velocityData: [],
+                        burndownData: [],
+                        contextSwitchPenalty: 0,
+                        flowStateMinutes: 0,
+                        peakPerformanceHours: [],
+                        productivityTrends: {
+                            weekly: [],
+                            monthly: []
+                        }
+                    };
+                } catch (error) {
+                    return {};
+                }
+            }
+            
+            loadGoals() {
+                try {
+                    const stored = localStorage.getItem(this.goalsKey);
+                    return stored ? JSON.parse(stored) : [];
+                } catch (error) {
+                    return [];
+                }
+            }
+            
+            loadAutomationRules() {
+                try {
+                    const stored = localStorage.getItem(this.automationKey);
+                    return stored ? JSON.parse(stored) : [];
+                } catch (error) {
+                    return [];
+                }
+            }
+            
+            loadTimeEntries() {
+                try {
+                    const stored = localStorage.getItem(this.timeTrackingKey);
+                    return stored ? JSON.parse(stored) : [];
+                } catch (error) {
+                    return [];
+                }
+            }
+            
+            loadMilestones() {
+                try {
+                    const stored = localStorage.getItem(this.milestonesKey);
+                    return stored ? JSON.parse(stored) : [];
+                } catch (error) {
+                    return [];
                 }
             }
             
@@ -78,49 +190,301 @@
                 }
             }
             
-            saveTasks() {
-                localStorage.setItem(this.storageKey, JSON.stringify(this.tasks));
-            }
-            
-            saveSettings() {
-                localStorage.setItem(this.settingsKey, JSON.stringify(this.settings));
-            }
-            
+            // Save methods
+            saveTasks() { localStorage.setItem(this.storageKey, JSON.stringify(this.tasks)); }
+            saveSettings() { localStorage.setItem(this.settingsKey, JSON.stringify(this.settings)); }
+            saveAnalytics() { localStorage.setItem(this.analyticsKey, JSON.stringify(this.analytics)); }
+            saveGoals() { localStorage.setItem(this.goalsKey, JSON.stringify(this.goals)); }
+            saveAutomationRules() { localStorage.setItem(this.automationKey, JSON.stringify(this.automationRules)); }
+            saveTimeEntries() { localStorage.setItem(this.timeTrackingKey, JSON.stringify(this.timeEntries)); }
+            saveMilestones() { localStorage.setItem(this.milestonesKey, JSON.stringify(this.milestones)); }
             saveUndoStack() {
-                this.undoStack = this.undoStack.slice(-10);
+                this.undoStack = this.undoStack.slice(-20);
                 localStorage.setItem(this.undoKey, JSON.stringify(this.undoStack));
             }
             
-            addToUndoStack(action, data) {
-                this.undoStack.push({
-                    action,
-                    data,
-                    timestamp: Date.now()
-                });
-                this.saveUndoStack();
+            initializeDefaults() {
+                // Initialize default goals if none exist
+                if (this.goals.length === 0) {
+                    this.goals = [
+                        {
+                            id: 1,
+                            title: 'Weekly Productivity',
+                            description: 'Complete 25 tasks per week',
+                            type: 'weekly',
+                            target: 25,
+                            current: 0,
+                            metric: 'tasksCompleted',
+                            createdAt: new Date().toISOString()
+                        },
+                        {
+                            id: 2,
+                            title: 'Monthly Learning',
+                            description: 'Watch 10 educational videos per month',
+                            type: 'monthly',
+                            target: 10,
+                            current: 0,
+                            metric: 'videosCompleted',
+                            createdAt: new Date().toISOString()
+                        }
+                    ];
+                    this.saveGoals();
+                }
+                
+                // Initialize default automation rules
+                if (this.automationRules.length === 0) {
+                    this.automationRules = [
+                        {
+                            id: 1,
+                            name: 'Auto-prioritize overdue tasks',
+                            trigger: 'task_overdue',
+                            action: 'set_priority',
+                            actionValue: 'high',
+                            active: true,
+                            createdAt: new Date().toISOString()
+                        },
+                        {
+                            id: 2,
+                            name: 'Auto-categorize YouTube links',
+                            trigger: 'url_contains',
+                            triggerValue: 'youtube.com',
+                            action: 'set_category',
+                            actionValue: 'video',
+                            active: true,
+                            createdAt: new Date().toISOString()
+                        }
+                    ];
+                    this.saveAutomationRules();
+                }
             }
             
-            getAllTasks() {
-                return this.tasks.sort((a, b) => {
-                    if (a.completed !== b.completed) return a.completed ? 1 : -1;
-                    const priorityOrder = { high: 3, medium: 2, low: 1 };
-                    if (a.priority !== b.priority) return (priorityOrder[b.priority] || 1) - (priorityOrder[a.priority] || 1);
-                    return new Date(b.createdAt) - new Date(a.createdAt);
+            // Automation Engine
+            startAutomationEngine() {
+                // Run automation checks every 5 minutes
+                setInterval(() => {
+                    this.runAutomationRules();
+                }, 5 * 60 * 1000);
+                
+                // Initial run
+                this.runAutomationRules();
+            }
+            
+            runAutomationRules() {
+                this.automationRules.filter(rule => rule.active).forEach(rule => {
+                    this.executeAutomationRule(rule);
                 });
             }
             
-            getTasksByCategory(category) {
-                if (category === 'all') return this.getAllTasks();
-                return this.tasks.filter(t => t.category === category)
-                    .sort((a, b) => {
-                        if (a.completed !== b.completed) return a.completed ? 1 : -1;
-                        const priorityOrder = { high: 3, medium: 2, low: 1 };
-                        if (a.priority !== b.priority) return (priorityOrder[b.priority] || 1) - (priorityOrder[a.priority] || 1);
-                        return new Date(b.createdAt) - new Date(a.createdAt);
+            executeAutomationRule(rule) {
+                let affectedTasks = [];
+                
+                switch (rule.trigger) {
+                    case 'task_overdue':
+                        affectedTasks = this.tasks.filter(t => 
+                            !t.completed && 
+                            t.deadline && 
+                            new Date(t.deadline) < new Date()
+                        );
+                        break;
+                    case 'url_contains':
+                        affectedTasks = this.tasks.filter(t => 
+                            t.url && 
+                            t.url.includes(rule.triggerValue)
+                        );
+                        break;
+                }
+                
+                affectedTasks.forEach(task => {
+                    const oldTask = { ...task };
+                    
+                    switch (rule.action) {
+                        case 'set_priority':
+                            if (task.priority !== rule.actionValue) {
+                                task.priority = rule.actionValue;
+                                task.automatedBy = rule.name;
+                                this.addToUndoStack('AUTOMATION_UPDATE', { oldTask, newTask: { ...task }, ruleId: rule.id });
+                            }
+                            break;
+                        case 'set_category':
+                            if (task.category !== rule.actionValue) {
+                                task.category = rule.actionValue;
+                                task.automatedBy = rule.name;
+                                this.addToUndoStack('AUTOMATION_UPDATE', { oldTask, newTask: { ...task }, ruleId: rule.id });
+                            }
+                            break;
+                        case 'add_tag':
+                            if (!task.tags.includes(rule.actionValue)) {
+                                task.tags.push(rule.actionValue);
+                                task.automatedBy = rule.name;
+                                this.addToUndoStack('AUTOMATION_UPDATE', { oldTask, newTask: { ...task }, ruleId: rule.id });
+                            }
+                            break;
+                    }
+                });
+                
+                if (affectedTasks.length > 0) {
+                    this.saveTasks();
+                }
+            }
+            
+            // Goal Management
+            addGoal(title, description, type, target, metric) {
+                const goal = {
+                    id: Date.now(),
+                    title,
+                    description,
+                    type, // daily, weekly, monthly, yearly
+                    target,
+                    current: 0,
+                    metric, // tasksCompleted, hoursWorked, etc.
+                    createdAt: new Date().toISOString(),
+                    completedAt: null,
+                    deadline: this.calculateGoalDeadline(type)
+                };
+                
+                this.goals.push(goal);
+                this.saveGoals();
+                return goal;
+            }
+            
+            calculateGoalDeadline(type) {
+                const now = new Date();
+                switch (type) {
+                    case 'daily':
+                        return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
+                    case 'weekly':
+                        const nextWeek = new Date(now);
+                        nextWeek.setDate(now.getDate() + (7 - now.getDay()));
+                        return nextWeek.toISOString();
+                    case 'monthly':
+                        return new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+                    case 'yearly':
+                        return new Date(now.getFullYear() + 1, 0, 1).toISOString();
+                    default:
+                        return null;
+                }
+            }
+            
+            updateGoalProgress(metric, increment = 1) {
+                this.goals.forEach(goal => {
+                    if (goal.metric === metric && !goal.completedAt) {
+                        goal.current = Math.min(goal.current + increment, goal.target);
+                        if (goal.current >= goal.target) {
+                            goal.completedAt = new Date().toISOString();
+                        }
+                    }
+                });
+                this.saveGoals();
+            }
+            
+            // Time Tracking
+            startTimeTracking(taskId) {
+                const entry = {
+                    id: Date.now(),
+                    taskId,
+                    startTime: new Date().toISOString(),
+                    endTime: null,
+                    duration: 0,
+                    paused: false,
+                    pausedDuration: 0
+                };
+                
+                this.timeEntries.push(entry);
+                this.saveTimeEntries();
+                return entry;
+            }
+            
+            stopTimeTracking(entryId) {
+                const entry = this.timeEntries.find(e => e.id === entryId);
+                if (entry && !entry.endTime) {
+                    entry.endTime = new Date().toISOString();
+                    entry.duration = (new Date(entry.endTime) - new Date(entry.startTime)) / 1000 / 60; // minutes
+                    
+                    // Update task actual time
+                    const task = this.tasks.find(t => t.id === entry.taskId);
+                    if (task) {
+                        task.actualTime = (task.actualTime || 0) + entry.duration;
+                        this.saveTasks();
+                    }
+                    
+                    this.saveTimeEntries();
+                    this.updateGoalProgress('minutesWorked', entry.duration);
+                    return entry;
+                }
+            }
+            
+            // Advanced Analytics
+            generateProductivityHeatmap() {
+                const heatmap = Array(24).fill(0);
+                
+                this.timeEntries.forEach(entry => {
+                    if (entry.endTime) {
+                        const hour = new Date(entry.startTime).getHours();
+                        heatmap[hour] += entry.duration;
+                    }
+                });
+                
+                // Normalize to 0-4 scale
+                const maxValue = Math.max(...heatmap);
+                return heatmap.map(value => Math.floor((value / maxValue) * 4) || 0);
+            }
+            
+            calculateVelocity() {
+                const last4Weeks = [];
+                for (let i = 0; i < 4; i++) {
+                    const weekStart = new Date();
+                    weekStart.setDate(weekStart.getDate() - (i * 7) - weekStart.getDay());
+                    weekStart.setHours(0, 0, 0, 0);
+                    
+                    const weekEnd = new Date(weekStart);
+                    weekEnd.setDate(weekEnd.getDate() + 7);
+                    
+                    const weekTasks = this.tasks.filter(t => 
+                        t.completedAt &&
+                        new Date(t.completedAt) >= weekStart &&
+                        new Date(t.completedAt) < weekEnd
+                    );
+                    
+                    last4Weeks.unshift({
+                        week: i + 1,
+                        completed: weekTasks.length,
+                        totalTime: weekTasks.reduce((sum, t) => sum + (t.actualTime || 0), 0),
+                        averageTime: weekTasks.length > 0 ? weekTasks.reduce((sum, t) => sum + (t.actualTime || 0), 0) / weekTasks.length : 0
                     });
+                }
+                
+                return last4Weeks;
             }
             
-            addTask(title, url, context, category, deadline, time, priority = 'medium', tags = []) {
+            generateBurndownChart(sprintLength = 14) {
+                const sprintStart = new Date();
+                sprintStart.setDate(sprintStart.getDate() - sprintLength);
+                
+                const sprintTasks = this.tasks.filter(t => 
+                    new Date(t.createdAt) >= sprintStart
+                );
+                
+                const burndown = [];
+                for (let day = 0; day <= sprintLength; day++) {
+                    const currentDate = new Date(sprintStart);
+                    currentDate.setDate(currentDate.getDate() + day);
+                    
+                    const remainingTasks = sprintTasks.filter(t => 
+                        !t.completedAt || new Date(t.completedAt) > currentDate
+                    ).length;
+                    
+                    burndown.push({
+                        day: day,
+                        remaining: remainingTasks,
+                        ideal: Math.max(0, sprintTasks.length - (sprintTasks.length / sprintLength * day))
+                    });
+                }
+                
+                return burndown;
+            }
+            
+            // Enhanced task management
+            addTask(title, url, context, category, deadline, time, priority = 'medium', tags = [], options = {}) {
                 const task = {
                     id: this.nextId++,
                     title,
@@ -133,23 +497,38 @@
                     tags: tags || [],
                     completed: false,
                     createdAt: new Date().toISOString(),
-                    completedAt: null
+                    completedAt: null,
+                    
+                    // Ultimate features
+                    estimatedTime: options.estimatedTime || null,
+                    actualTime: null,
+                    projectId: options.projectId || null,
+                    parentTaskId: options.parentTaskId || null,
+                    dependencies: options.dependencies || [],
+                    recurring: options.recurring || null,
+                    energyLevel: options.energyLevel || 'medium',
+                    location: options.location || null,
+                    assignedTo: options.assignedTo || null,
+                    watchers: options.watchers || [],
+                    customFields: options.customFields || {},
+                    automatedBy: null,
+                    
+                    // Calculated fields
+                    urgency: this.calculateUrgency(deadline, priority),
+                    importance: this.calculateImportance(priority, tags),
+                    complexity: options.complexity || 'medium',
+                    businessValue: options.businessValue || 'medium'
                 };
+                
                 this.tasks.push(task);
                 this.addToUndoStack('ADD_TASK', { task: { ...task } });
+                this.updateGoalProgress('tasksCreated');
                 this.saveTasks();
-                return task;
-            }
-            
-            updateTask(id, updates) {
-                const taskIndex = this.tasks.findIndex(t => t.id === id);
-                if (taskIndex === -1) return null;
                 
-                const oldTask = { ...this.tasks[taskIndex] };
-                this.tasks[taskIndex] = { ...this.tasks[taskIndex], ...updates };
-                this.addToUndoStack('UPDATE_TASK', { oldTask, newTask: { ...this.tasks[taskIndex] } });
-                this.saveTasks();
-                return this.tasks[taskIndex];
+                // Run automation rules on new task
+                setTimeout(() => this.runAutomationRules(), 100);
+                
+                return task;
             }
             
             toggleComplete(id) {
@@ -158,10 +537,157 @@
                     const oldState = { ...task };
                     task.completed = !task.completed;
                     task.completedAt = task.completed ? new Date().toISOString() : null;
+                    
+                    if (task.completed) {
+                        this.updateGoalProgress('tasksCompleted');
+                        if (task.category === 'video') {
+                            this.updateGoalProgress('videosCompleted');
+                        }
+                        
+                        // Create recurring task if applicable
+                        if (task.recurring) {
+                            this.createRecurringTask(task);
+                        }
+                    }
+                    
                     this.addToUndoStack('TOGGLE_COMPLETE', { taskId: id, oldState });
                     this.saveTasks();
                 }
                 return task;
+            }
+            
+            createRecurringTask(originalTask) {
+                const nextDate = this.calculateNextRecurrence(originalTask.recurring, originalTask.deadline);
+                if (nextDate) {
+                    const recurringTask = {
+                        ...originalTask,
+                        id: this.nextId++,
+                        completed: false,
+                        completedAt: null,
+                        deadline: nextDate,
+                        createdAt: new Date().toISOString(),
+                        parentTaskId: originalTask.id
+                    };
+                    
+                    this.tasks.push(recurringTask);
+                    this.saveTasks();
+                }
+            }
+            
+            calculateNextRecurrence(recurring, currentDate) {
+                if (!currentDate) return null;
+                
+                const date = new Date(currentDate);
+                switch (recurring.type) {
+                    case 'daily':
+                        date.setDate(date.getDate() + (recurring.interval || 1));
+                        return date.toISOString();
+                    case 'weekly':
+                        date.setDate(date.getDate() + ((recurring.interval || 1) * 7));
+                        return date.toISOString();
+                    case 'monthly':
+                        date.setMonth(date.getMonth() + (recurring.interval || 1));
+                        return date.toISOString();
+                    default:
+                        return null;
+                }
+            }
+            
+            // Utility methods
+            calculateUrgency(deadline, priority) {
+                if (!deadline) return priority === 'high' ? 0.7 : priority === 'medium' ? 0.5 : 0.3;
+                
+                const days = (new Date(deadline) - new Date()) / (1000 * 60 * 60 * 24);
+                if (days <= 0) return 1;
+                if (days <= 1) return 0.9;
+                if (days <= 3) return 0.7;
+                if (days <= 7) return 0.5;
+                return 0.3;
+            }
+            
+            calculateImportance(priority, tags) {
+                let score = priority === 'high' ? 0.9 : priority === 'medium' ? 0.6 : 0.3;
+                
+                const importantTags = ['work', 'career', 'health', 'finance', 'urgent'];
+                if (tags.some(tag => importantTags.includes(tag.toLowerCase()))) {
+                    score += 0.2;
+                }
+                
+                return Math.min(score, 1);
+            }
+            
+            addToUndoStack(action, data) {
+                this.undoStack.push({
+                    action,
+                    data,
+                    timestamp: Date.now()
+                });
+                this.saveUndoStack();
+            }
+            
+            undo() {
+                if (this.undoStack.length === 0) return null;
+                
+                const lastAction = this.undoStack.pop();
+                this.saveUndoStack();
+                
+                switch (lastAction.action) {
+                    case 'ADD_TASK':
+                        this.tasks = this.tasks.filter(t => t.id !== lastAction.data.task.id);
+                        break;
+                    case 'TOGGLE_COMPLETE':
+                        const task = this.tasks.find(t => t.id === lastAction.data.taskId);
+                        if (task) {
+                            Object.assign(task, lastAction.data.oldState);
+                        }
+                        break;
+                    case 'AUTOMATION_UPDATE':
+                        const automatedTask = this.tasks.find(t => t.id === lastAction.data.oldTask.id);
+                        if (automatedTask) {
+                            Object.assign(automatedTask, lastAction.data.oldTask);
+                        }
+                        break;
+                }
+                
+                this.saveTasks();
+                return lastAction;
+            }
+            
+            getAllTasks() {
+                return this.tasks.sort((a, b) => {
+                    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+                    
+                    // Smart scoring algorithm
+                    const scoreA = this.calculateTaskScore(a);
+                    const scoreB = this.calculateTaskScore(b);
+                    
+                    return scoreB - scoreA;
+                });
+            }
+            
+            calculateTaskScore(task) {
+                return (task.urgency || 0) * 0.4 + 
+                       (task.importance || 0) * 0.3 + 
+                       (this.getComplexityScore(task.complexity) * 0.2) + 
+                       (this.getBusinessValueScore(task.businessValue) * 0.1);
+            }
+            
+            getComplexityScore(complexity) {
+                const map = { low: 0.3, medium: 0.6, high: 0.9 };
+                return map[complexity] || 0.6;
+            }
+            
+            getBusinessValueScore(value) {
+                const map = { low: 0.3, medium: 0.6, high: 0.9 };
+                return map[value] || 0.6;
+            }
+            
+            getTasksByCategory(category) {
+                if (category === 'all') return this.getAllTasks();
+                return this.tasks.filter(t => t.category === category).sort((a, b) => {
+                    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+                    return this.calculateTaskScore(b) - this.calculateTaskScore(a);
+                });
             }
             
             deleteTask(id) {
@@ -176,35 +702,15 @@
                 return false;
             }
             
-            undo() {
-                if (this.undoStack.length === 0) return null;
+            updateTask(id, updates) {
+                const taskIndex = this.tasks.findIndex(t => t.id === id);
+                if (taskIndex === -1) return null;
                 
-                const lastAction = this.undoStack.pop();
-                this.saveUndoStack();
-                
-                switch (lastAction.action) {
-                    case 'ADD_TASK':
-                        this.tasks = this.tasks.filter(t => t.id !== lastAction.data.task.id);
-                        break;
-                    case 'DELETE_TASK':
-                        this.tasks.splice(lastAction.data.index, 0, lastAction.data.task);
-                        break;
-                    case 'UPDATE_TASK':
-                        const taskIndex = this.tasks.findIndex(t => t.id === lastAction.data.oldTask.id);
-                        if (taskIndex !== -1) {
-                            this.tasks[taskIndex] = lastAction.data.oldTask;
-                        }
-                        break;
-                    case 'TOGGLE_COMPLETE':
-                        const task = this.tasks.find(t => t.id === lastAction.data.taskId);
-                        if (task) {
-                            Object.assign(task, lastAction.data.oldState);
-                        }
-                        break;
-                }
-                
+                const oldTask = { ...this.tasks[taskIndex] };
+                this.tasks[taskIndex] = { ...this.tasks[taskIndex], ...updates };
+                this.addToUndoStack('UPDATE_TASK', { oldTask, newTask: { ...this.tasks[taskIndex] } });
                 this.saveTasks();
-                return lastAction;
+                return this.tasks[taskIndex];
             }
             
             getStats() {
@@ -219,250 +725,592 @@
                     !t.completed && t.deadline && 
                     new Date(t.deadline).toDateString() === now.toDateString()
                 ).length;
-                return { total, pending, completed, overdue, today };
+                const highPriority = this.tasks.filter(t => 
+                    !t.completed && t.priority === 'high'
+                ).length;
+                
+                const thisWeekCompleted = this.tasks.filter(t => {
+                    if (!t.completedAt) return false;
+                    const weekStart = new Date();
+                    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+                    weekStart.setHours(0, 0, 0, 0);
+                    return new Date(t.completedAt) >= weekStart;
+                }).length;
+                
+                return { 
+                    total, pending, completed, overdue, today, highPriority,
+                    thisWeekCompleted,
+                    velocity: this.calculateVelocity(),
+                    activeGoals: this.goals.filter(g => !g.completedAt).length,
+                    completedGoals: this.goals.filter(g => g.completedAt).length
+                };
             }
             
             exportData() {
                 return JSON.stringify({
                     tasks: this.tasks,
                     settings: this.settings,
-                    exported: new Date().toISOString()
+                    analytics: this.analytics,
+                    goals: this.goals,
+                    automationRules: this.automationRules,
+                    timeEntries: this.timeEntries,
+                    milestones: this.milestones,
+                    exported: new Date().toISOString(),
+                    version: '2.0.0'
                 }, null, 2);
             }
-            
-            importData(jsonData) {
-                try {
-                    const data = JSON.parse(jsonData);
-                    if (data.tasks && Array.isArray(data.tasks)) {
-                        this.tasks = data.tasks;
-                        this.nextId = Math.max(...this.tasks.map(t => t.id), 0) + 1;
-                        if (data.settings) {
-                            this.settings = { ...this.settings, ...data.settings };
-                        }
-                        this.saveTasks();
-                        this.saveSettings();
-                        return true;
-                    }
-                } catch (error) {
-                    console.error('Import failed:', error);
-                }
-                return false;
-            }
         }
         
-        const storage = new TaskStorage();
+        const storage = new TaskStorageUltimate();
         
-        // Enhanced shared content handler with extensive debugging
-        function handleSharedContent() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlHash = window.location.hash;
-            const urlPath = window.location.pathname;
+        // Goal Management Component
+        function GoalsManager({ goals, onAddGoal, onUpdateGoal }) {
+            const [showAddForm, setShowAddForm] = useState(false);
+            const [newGoal, setNewGoal] = useState({
+                title: '',
+                description: '',
+                type: 'weekly',
+                target: 10,
+                metric: 'tasksCompleted'
+            });
             
-            // Log everything for debugging
-            const debugInfo = {
-                fullUrl: window.location.href,
-                search: window.location.search,
-                hash: urlHash,
-                pathname: urlPath,
-                allParams: Object.fromEntries(urlParams.entries())
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onAddGoal(newGoal.title, newGoal.description, newGoal.type, newGoal.target, newGoal.metric);
+                setNewGoal({ title: '', description: '', type: 'weekly', target: 10, metric: 'tasksCompleted' });
+                setShowAddForm(false);
             };
             
-            console.log('🔍 Web Share Debug Info:', debugInfo);
+            const getProgressPercentage = (goal) => {
+                return Math.min((goal.current / goal.target) * 100, 100);
+            };
             
-            // Try multiple ways to get shared content
-            const possibleUrls = [
-                urlParams.get('url'),
-                urlParams.get('text'), 
-                urlParams.get('u'),
-                urlParams.get('link'),
-                urlParams.get('href')
-            ].filter(Boolean);
-            
-            const possibleTitles = [
-                urlParams.get('title'),
-                urlParams.get('subject'),
-                urlParams.get('name')
-            ].filter(Boolean);
-            
-            console.log('🔍 Found URLs:', possibleUrls);
-            console.log('🔍 Found Titles:', possibleTitles);
-            
-            const sharedUrl = possibleUrls[0];
-            const sharedTitle = possibleTitles[0];
-            
-            if (sharedUrl) {
-                console.log('✅ Processing shared URL:', sharedUrl);
+            return e('div', { className: 'bg-white rounded-lg p-6 shadow-sm' },
+                e('div', { className: 'flex items-center justify-between mb-4' },
+                    e('h3', { className: 'text-lg font-bold' }, 'Goals & Targets'),
+                    e('button', {
+                        onClick: () => setShowAddForm(true),
+                        className: 'px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600'
+                    }, '+ Add Goal')
+                ),
                 
-                // Determine category based on URL
-                let category = 'link';
-                const lowerUrl = sharedUrl.toLowerCase();
+                e('div', { className: 'space-y-4' },
+                    ...goals.slice(0, 6).map(goal => {
+                        const progress = getProgressPercentage(goal);
+                        const isCompleted = goal.completedAt;
+                        
+                        return e('div', { 
+                            key: goal.id, 
+                            className: `p-4 rounded-lg border ${isCompleted ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`
+                        },
+                            e('div', { className: 'flex items-center justify-between mb-2' },
+                                e('div', null,
+                                    e('h4', { className: 'font-medium text-sm' }, goal.title),
+                                    e('p', { className: 'text-xs text-gray-600' }, goal.description)
+                                ),
+                                e('div', { className: 'text-right' },
+                                    e('div', { className: 'text-sm font-bold' }, `${goal.current}/${goal.target}`),
+                                    e('div', { className: 'text-xs text-gray-500 capitalize' }, goal.type)
+                                )
+                            ),
+                            e('div', { className: 'w-full bg-gray-200 rounded-full h-2' },
+                                e('div', { 
+                                    className: `h-2 rounded-full transition-all duration-300 ${isCompleted ? 'bg-green-500' : 'bg-blue-500'}`,
+                                    style: { width: `${progress}%` }
+                                })
+                            ),
+                            e('div', { className: 'flex items-center justify-between mt-2' },
+                                e('span', { className: 'text-xs text-gray-500' }, `${Math.round(progress)}% complete`),
+                                isCompleted && e('span', { className: 'text-xs text-green-600 font-medium' }, '✓ Completed!')
+                            )
+                        );
+                    })
+                ),
                 
-                if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be') || 
-                    lowerUrl.includes('vimeo.com') || lowerUrl.includes('tiktok.com') ||
-                    lowerUrl.includes('instagram.com/reel') || lowerUrl.includes('twitter.com') && lowerUrl.includes('video')) {
-                    category = 'video';
-                } else if (lowerUrl.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i)) {
-                    category = 'image';
-                } else if (lowerUrl.includes('medium.com') || lowerUrl.includes('substack.com') ||
-                          lowerUrl.includes('blog') || lowerUrl.includes('article') || lowerUrl.includes('news')) {
-                    category = 'article';
+                // Add Goal Form
+                showAddForm && e('div', { className: 'modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50' },
+                    e('div', { className: 'bg-white rounded-lg p-6 w-full max-w-md' },
+                        e('h3', { className: 'text-lg font-bold mb-4' }, 'Add New Goal'),
+                        e('form', { onSubmit: handleSubmit },
+                            e('input', {
+                                type: 'text',
+                                placeholder: 'Goal title',
+                                value: newGoal.title,
+                                onChange: (e) => setNewGoal({...newGoal, title: e.target.value}),
+                                className: 'w-full px-3 py-2 border border-gray-300 rounded mb-3 focus:ring-2 focus:ring-blue-500',
+                                required: true
+                            }),
+                            e('textarea', {
+                                placeholder: 'Goal description',
+                                value: newGoal.description,
+                                onChange: (e) => setNewGoal({...newGoal, description: e.target.value}),
+                                className: 'w-full px-3 py-2 border border-gray-300 rounded mb-3 focus:ring-2 focus:ring-blue-500',
+                                rows: 2
+                            }),
+                            e('div', { className: 'grid grid-cols-2 gap-3 mb-3' },
+                                e('select', {
+                                    value: newGoal.type,
+                                    onChange: (e) => setNewGoal({...newGoal, type: e.target.value}),
+                                    className: 'px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500'
+                                },
+                                    e('option', { value: 'daily' }, 'Daily'),
+                                    e('option', { value: 'weekly' }, 'Weekly'),
+                                    e('option', { value: 'monthly' }, 'Monthly'),
+                                    e('option', { value: 'yearly' }, 'Yearly')
+                                ),
+                                e('input', {
+                                    type: 'number',
+                                    placeholder: 'Target number',
+                                    value: newGoal.target,
+                                    onChange: (e) => setNewGoal({...newGoal, target: parseInt(e.target.value)}),
+                                    className: 'px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500',
+                                    min: 1
+                                })
+                            ),
+                            e('select', {
+                                value: newGoal.metric,
+                                onChange: (e) => setNewGoal({...newGoal, metric: e.target.value}),
+                                className: 'w-full px-3 py-2 border border-gray-300 rounded mb-4 focus:ring-2 focus:ring-blue-500'
+                            },
+                                e('option', { value: 'tasksCompleted' }, 'Tasks Completed'),
+                                e('option', { value: 'videosCompleted' }, 'Videos Watched'),
+                                e('option', { value: 'articlesRead' }, 'Articles Read'),
+                                e('option', { value: 'minutesWorked' }, 'Minutes Worked'),
+                                e('option', { value: 'projectsCompleted' }, 'Projects Completed')
+                            ),
+                            e('div', { className: 'flex space-x-3' },
+                                e('button', {
+                                    type: 'submit',
+                                    className: 'flex-1 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600'
+                                }, 'Add Goal'),
+                                e('button', {
+                                    type: 'button',
+                                    onClick: () => setShowAddForm(false),
+                                    className: 'flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400'
+                                }, 'Cancel')
+                            )
+                        )
+                    )
+                )
+            );
+        }
+        
+        // Automation Rules Manager
+        function AutomationManager({ rules, onAddRule, onToggleRule }) {
+            const [showAddForm, setShowAddForm] = useState(false);
+            
+            return e('div', { className: 'bg-white rounded-lg p-6 shadow-sm' },
+                e('div', { className: 'flex items-center justify-between mb-4' },
+                    e('h3', { className: 'text-lg font-bold' }, 'Automation Rules'),
+                    e('button', {
+                        onClick: () => setShowAddForm(true),
+                        className: 'px-3 py-1 bg-purple-500 text-white rounded text-sm hover:bg-purple-600'
+                    }, '+ Add Rule')
+                ),
+                
+                e('div', { className: 'space-y-3' },
+                    ...rules.map(rule =>
+                        e('div', { key: rule.id, className: 'automation-rule p-4 rounded-lg' },
+                            e('div', { className: 'flex items-center justify-between' },
+                                e('div', { className: 'flex-1' },
+                                    e('h4', { className: 'font-medium text-sm' }, rule.name),
+                                    e('p', { className: 'text-xs text-gray-600 mt-1' },
+                                        `When ${rule.trigger}${rule.triggerValue ? ` "${rule.triggerValue}"` : ''} → ${rule.action}${rule.actionValue ? ` "${rule.actionValue}"` : ''}`
+                                    )
+                                ),
+                                e('div', { className: 'flex items-center space-x-2' },
+                                    e('span', { 
+                                        className: `px-2 py-1 rounded text-xs ${rule.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`
+                                    }, rule.active ? 'Active' : 'Inactive'),
+                                    e('button', {
+                                        onClick: () => onToggleRule(rule.id),
+                                        className: 'text-blue-600 hover:text-blue-800 text-sm'
+                                    }, rule.active ? 'Disable' : 'Enable')
+                                )
+                            )
+                        )
+                    )
+                )
+            );
+        }
+        
+        // Time Tracking Component
+        function TimeTracker({ activeEntry, onStart, onStop, onPause }) {
+            const [elapsed, setElapsed] = useState(0);
+            
+            useEffect(() => {
+                let interval = null;
+                if (activeEntry && !activeEntry.paused) {
+                    interval = setInterval(() => {
+                        const now = new Date();
+                        const start = new Date(activeEntry.startTime);
+                        setElapsed(Math.floor((now - start) / 1000 / 60)); // minutes
+                    }, 1000);
                 }
-                
-                // Extract domain for better title
-                let title = sharedTitle;
-                if (!title || title.trim() === '') {
-                    try {
-                        const urlObj = new URL(sharedUrl);
-                        title = `Shared from ${urlObj.hostname}`;
-                    } catch (e) {
-                        title = 'Shared content';
-                    }
-                }
-                
-                console.log('✅ Creating task:', { title, url: sharedUrl, category });
-                
-                // Add the task
-                const task = storage.addTask(
-                    title, 
-                    sharedUrl, 
-                    'Shared via web share', 
-                    category, 
-                    null, 
-                    null, 
-                    'medium', 
-                    ['shared']
+                return () => clearInterval(interval);
+            }, [activeEntry]);
+            
+            return e('div', { className: 'time-tracking p-4 rounded-lg' },
+                e('h3', { className: 'font-bold mb-3' }, 'Time Tracking'),
+                activeEntry ? (
+                    e('div', { className: 'text-center' },
+                        e('div', { className: 'text-2xl font-bold mb-2' }, 
+                            `${Math.floor(elapsed / 60)}:${(elapsed % 60).toString().padStart(2, '0')}`
+                        ),
+                        e('p', { className: 'text-sm text-gray-600 mb-3' }, 'Tracking time...'),
+                        e('div', { className: 'flex space-x-2' },
+                            e('button', {
+                                onClick: () => onPause(activeEntry.id),
+                                className: 'px-4 py-2 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600'
+                            }, activeEntry.paused ? 'Resume' : 'Pause'),
+                            e('button', {
+                                onClick: () => onStop(activeEntry.id),
+                                className: 'px-4 py-2 bg-red-500 text-white rounded text-sm hover:bg-red-600'
+                            }, 'Stop')
+                        )
+                    )
+                ) : (
+                    e('div', { className: 'text-center text-gray-500' },
+                        e('p', { className: 'mb-3' }, 'No active time tracking'),
+                        e('p', { className: 'text-sm' }, 'Start tracking from any task')
+                    )
+                )
+            );
+        }
+        
+        // Productivity Heatmap
+        function ProductivityHeatmap({ heatmapData }) {
+            const hours = Array.from({length: 24}, (_, i) => i);
+            
+            return e('div', { className: 'bg-white rounded-lg p-6 shadow-sm' },
+                e('h3', { className: 'text-lg font-bold mb-4' }, 'Productivity Heatmap'),
+                e('div', { className: 'productivity-heatmap' },
+                    ...hours.map(hour => 
+                        e('div', { 
+                            key: hour,
+                            className: `heatmap-cell intensity-${heatmapData[hour] || 0}`,
+                            title: `${hour}:00 - Intensity: ${heatmapData[hour] || 0}`
+                        })
+                    )
+                ),
+                e('div', { className: 'flex items-center justify-between mt-3 text-xs text-gray-500' },
+                    e('span', null, '12 AM'),
+                    e('span', null, '6 AM'),
+                    e('span', null, '12 PM'),
+                    e('span', null, '6 PM'),
+                    e('span', null, '11 PM')
+                ),
+                e('div', { className: 'flex items-center justify-center mt-3 space-x-2 text-xs text-gray-500' },
+                    e('span', null, 'Less'),
+                    ...Array.from({length: 5}, (_, i) => 
+                        e('div', { key: i, className: `w-3 h-3 intensity-${i}` })
+                    ),
+                    e('span', null, 'More')
+                )
+            );
+        }
+        
+        // Velocity Chart
+        function VelocityChart({ velocityData }) {
+            if (!velocityData || velocityData.length === 0) {
+                return e('div', { className: 'velocity-chart p-6 rounded-lg text-center text-gray-500' },
+                    'No velocity data available yet'
                 );
-                
-                // Clear URL parameters after processing
-                window.history.replaceState({}, document.title, window.location.pathname);
-                
-                console.log('✅ Task created successfully:', task);
-                
-                return { 
-                    title, 
-                    url: sharedUrl, 
-                    category, 
-                    task,
-                    debugInfo 
-                };
-            } else {
-                console.log('❌ No shared URL found in parameters');
-                return { debugInfo };
-            }
-        }
-        
-        // Voice Recognition Component
-        function VoiceInput({ onResult, onError }) {
-            const [isListening, setIsListening] = useState(false);
-            const recognitionRef = useRef(null);
-            
-            useEffect(() => {
-                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                    recognitionRef.current = new SpeechRecognition();
-                    recognitionRef.current.continuous = false;
-                    recognitionRef.current.interimResults = false;
-                    recognitionRef.current.lang = 'en-US';
-                    
-                    recognitionRef.current.onresult = (event) => {
-                        const transcript = event.results[0][0].transcript;
-                        onResult(transcript);
-                        setIsListening(false);
-                    };
-                    
-                    recognitionRef.current.onerror = (event) => {
-                        onError(event.error);
-                        setIsListening(false);
-                    };
-                    
-                    recognitionRef.current.onend = () => {
-                        setIsListening(false);
-                    };
-                }
-            }, [onResult, onError]);
-            
-            const startListening = () => {
-                if (recognitionRef.current) {
-                    setIsListening(true);
-                    recognitionRef.current.start();
-                }
-            };
-            
-            const stopListening = () => {
-                if (recognitionRef.current) {
-                    recognitionRef.current.stop();
-                    setIsListening(false);
-                }
-            };
-            
-            if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-                return null;
             }
             
-            return e('button', {
-                type: 'button',
-                onClick: isListening ? stopListening : startListening,
-                className: `px-3 py-2 rounded border ${isListening ? 'recording bg-red-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}`
-            }, isListening ? '🎤 Stop' : '🎤 Speak');
-        }
-        
-        // Debug Info Component
-        function DebugInfo({ debugInfo, show }) {
-            if (!show || !debugInfo) return null;
+            const maxCompleted = Math.max(...velocityData.map(w => w.completed));
             
-            return e('div', { className: 'debug-info' },
-                e('div', { className: 'font-bold mb-2' }, 'Web Share Debug:'),
-                e('div', null, `URL: ${debugInfo.fullUrl || 'none'}`),
-                e('div', null, `Search: ${debugInfo.search || 'none'}`),
-                e('div', null, `Params: ${JSON.stringify(debugInfo.allParams || {})}`),
-                e('div', null, `Hash: ${debugInfo.hash || 'none'}`)
+            return e('div', { className: 'velocity-chart p-6 rounded-lg' },
+                e('h3', { className: 'font-bold mb-4' }, 'Weekly Velocity'),
+                e('div', { className: 'flex items-end space-x-4 h-32' },
+                    ...velocityData.map((week, i) => {
+                        const height = maxCompleted > 0 ? (week.completed / maxCompleted) * 100 : 0;
+                        
+                        return e('div', { key: i, className: 'flex-1 flex flex-col items-center' },
+                            e('div', { 
+                                className: 'bg-green-500 w-full rounded-t',
+                                style: { height: `${height}%`, minHeight: week.completed > 0 ? '4px' : '0' },
+                                title: `Week ${week.week}: ${week.completed} tasks, ${Math.round(week.totalTime)} minutes`
+                            }),
+                            e('div', { className: 'text-xs text-gray-500 mt-1' }, `W${week.week}`),
+                            e('div', { className: 'text-xs font-medium' }, week.completed)
+                        );
+                    })
+                ),
+                e('div', { className: 'mt-4 grid grid-cols-2 gap-4 text-sm' },
+                    e('div', null,
+                        e('span', { className: 'text-gray-600' }, 'Avg Tasks/Week: '),
+                        e('span', { className: 'font-medium' }, 
+                            Math.round(velocityData.reduce((sum, w) => sum + w.completed, 0) / velocityData.length)
+                        )
+                    ),
+                    e('div', null,
+                        e('span', { className: 'text-gray-600' }, 'Avg Time/Task: '),
+                        e('span', { className: 'font-medium' }, 
+                            `${Math.round(velocityData.reduce((sum, w) => sum + w.averageTime, 0) / velocityData.length)}m`
+                        )
+                    )
+                )
             );
         }
         
-        // Undo Toast Component
-        function UndoToast({ show, onUndo, onDismiss, actionText }) {
-            useEffect(() => {
-                if (show) {
-                    const timer = setTimeout(onDismiss, 5000);
-                    return () => clearTimeout(timer);
-                }
-            }, [show, onDismiss]);
+        // Enhanced Task Item with Ultimate Features
+        function UltimateTaskItem({ task, onToggle, onDelete, onEdit, onStartTimer, activeTimer }) {
+            const isOverdue = task.deadline && !task.completed && new Date(task.deadline) < new Date();
+            const isTracking = activeTimer && activeTimer.taskId === task.id;
             
-            if (!show) return null;
+            const priorityColors = {
+                high: 'text-red-600 bg-red-100',
+                medium: 'text-yellow-600 bg-yellow-100',
+                low: 'text-green-600 bg-green-100'
+            };
             
-            return e('div', { className: 'undo-toast bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-3' },
-                e('span', { className: 'text-sm' }, actionText),
-                e('button', {
-                    onClick: onUndo,
-                    className: 'bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600'
-                }, 'Undo'),
-                e('button', {
-                    onClick: onDismiss,
-                    className: 'text-gray-300 hover:text-white'
-                }, '×')
+            const complexityIcons = {
+                low: '🟢',
+                medium: '🟡',
+                high: '🔴'
+            };
+            
+            return e('div', { 
+                className: `task-item bg-white rounded-lg shadow-sm border p-4 mb-3 priority-${task.priority} ${
+                    task.completed ? 'completed' : ''
+                } ${isOverdue ? 'overdue' : ''} ${isTracking ? 'border-blue-400 shadow-blue-100' : ''}`
+            },
+                e('div', { className: 'flex items-start justify-between' },
+                    e('div', { className: 'flex-1' },
+                        e('div', { className: 'flex items-center space-x-2 mb-2' },
+                            e('h3', { className: 'task-title font-medium text-gray-900' }, task.title),
+                            e('span', { 
+                                className: `px-2 py-1 rounded text-xs ${priorityColors[task.priority] || priorityColors.medium}`
+                            }, task.priority?.toUpperCase() || 'MEDIUM'),
+                            task.complexity && e('span', { className: 'text-sm', title: `${task.complexity} complexity` }, 
+                                complexityIcons[task.complexity]
+                            ),
+                            task.automatedBy && e('span', { 
+                                className: 'px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs',
+                                title: `Automated by: ${task.automatedBy}`
+                            }, '🤖')
+                        ),
+                        e('p', { className: 'text-gray-600 text-sm mb-2' }, task.context),
+                        task.url && e('a', {
+                            href: task.url,
+                            target: '_blank',
+                            rel: 'noopener noreferrer',
+                            className: 'text-blue-500 text-sm hover:underline block mb-2 truncate'
+                        }, task.url),
+                        e('div', { className: 'flex flex-wrap items-center gap-2' },
+                            task.deadline && e('div', { 
+                                className: `text-sm ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'}`
+                            },
+                                '📅 ', new Date(task.deadline).toLocaleDateString()
+                            ),
+                            task.estimatedTime && e('span', { className: 'px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs' }, 
+                                `~${task.estimatedTime}m`
+                            ),
+                            task.actualTime && e('span', { className: 'px-2 py-1 bg-green-100 text-green-800 rounded text-xs' }, 
+                                `${Math.round(task.actualTime)}m actual`
+                            ),
+                            task.energyLevel && e('span', { className: 'text-xs text-gray-500' }, 
+                                task.energyLevel === 'high' ? '🔋🔋🔋' : 
+                                task.energyLevel === 'medium' ? '🔋🔋' : '🔋'
+                            ),
+                            task.businessValue && task.businessValue !== 'medium' && e('span', { 
+                                className: `px-2 py-1 rounded text-xs ${
+                                    task.businessValue === 'high' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
+                                }`
+                            }, `${task.businessValue} value`),
+                            task.tags && task.tags.map((tag, i) =>
+                                e('span', { 
+                                    key: i, 
+                                    className: 'tag bg-blue-100 text-blue-800'
+                                }, `#${tag}`)
+                            ),
+                            isTracking && e('span', { className: 'px-2 py-1 bg-red-100 text-red-800 rounded text-xs animate-pulse' }, 
+                                '⏱️ Tracking'
+                            )
+                        )
+                    ),
+                    e('div', { className: 'flex flex-col items-end space-y-2 ml-4' },
+                        e('button', {
+                            onClick: () => onToggle(task.id),
+                            className: `px-3 py-1 rounded text-sm transition-colors ${
+                                task.completed
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-gray-100 text-gray-800 hover:bg-blue-100 hover:text-blue-800'
+                            }`
+                        }, task.completed ? '✓ Done' : 'Mark Done'),
+                        e('div', { className: 'flex space-x-1' },
+                            !task.completed && e('button', {
+                                onClick: () => onStartTimer(task.id),
+                                className: `px-2 py-1 rounded text-xs hover:bg-blue-200 ${
+                                    isTracking ? 'bg-blue-200 text-blue-800' : 'bg-blue-100 text-blue-800'
+                                }`,
+                                disabled: isTracking
+                            }, '⏱️'),
+                            e('button', {
+                                onClick: () => onEdit(task),
+                                className: 'px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs hover:bg-blue-200'
+                            }, '✏️'),
+                            e('button', {
+                                onClick: () => onDelete(task.id),
+                                className: 'px-2 py-1 bg-red-100 text-red-800 rounded text-xs hover:bg-red-200'
+                            }, '🗑️')
+                        )
+                    )
+                )
             );
         }
         
-        // Header Component
-        function Header({ searchQuery, onSearchChange, onShowSettings, onToggleDebug, showDebug }) {
+        // Enhanced Stats with Ultimate Metrics
+        function UltimateStatsOverview({ stats }) {
+            const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+            const weeklyVelocity = stats.velocity && stats.velocity.length > 0 ? 
+                stats.velocity[stats.velocity.length - 1].completed : 0;
+            
+            return e('div', { className: 'p-4 bg-white mx-4 mt-4 rounded-lg shadow-sm' },
+                e('div', { className: 'grid grid-cols-2 md:grid-cols-4 gap-4 mb-4' },
+                    e('div', { className: 'text-center' },
+                        e('div', { className: 'text-lg font-bold text-blue-600' }, stats.total),
+                        e('div', { className: 'text-xs text-gray-500' }, 'Total Tasks')
+                    ),
+                    e('div', { className: 'text-center' },
+                        e('div', { className: 'text-lg font-bold text-green-600' }, `${completionRate}%`),
+                        e('div', { className: 'text-xs text-gray-500' }, 'Completion Rate')
+                    ),
+                    e('div', { className: 'text-center' },
+                        e('div', { className: 'text-lg font-bold text-purple-600' }, weeklyVelocity),
+                        e('div', { className: 'text-xs text-gray-500' }, 'Weekly Velocity')
+                    ),
+                    e('div', { className: 'text-center' },
+                        e('div', { className: 'text-lg font-bold text-orange-600' }, `${stats.activeGoals}/${stats.activeGoals + stats.completedGoals}`),
+                        e('div', { className: 'text-xs text-gray-500' }, 'Active Goals')
+                    )
+                ),
+                
+                e('div', { className: 'grid grid-cols-3 gap-4' },
+                    e('div', { className: 'text-center' },
+                        e('div', { className: 'relative w-16 h-16 mx-auto mb-2' },
+                            e('svg', { className: 'w-16 h-16 transform -rotate-90' },
+                                e('circle', { 
+                                    cx: 32, cy: 32, r: 28, 
+                                    className: 'text-gray-200',
+                                    strokeWidth: 4,
+                                    fill: 'none',
+                                    stroke: 'currentColor'
+                                }),
+                                e('circle', { 
+                                    cx: 32, cy: 32, r: 28,
+                                    className: 'text-green-500',
+                                    strokeWidth: 4,
+                                    fill: 'none',
+                                    stroke: 'currentColor',
+                                    strokeDasharray: `${2 * Math.PI * 28}`,
+                                    strokeDashoffset: `${2 * Math.PI * 28 * (1 - completionRate / 100)}`,
+                                    strokeLinecap: 'round'
+                                })
+                            ),
+                            e('div', { className: 'absolute inset-0 flex items-center justify-center text-xs font-bold' },
+                                `${completionRate}%`
+                            )
+                        ),
+                        e('div', { className: 'text-xs text-gray-500' }, 'Completion')
+                    ),
+                    e('div', { className: 'text-center' },
+                        e('div', { className: 'relative w-16 h-16 mx-auto mb-2' },
+                            e('svg', { className: 'w-16 h-16 transform -rotate-90' },
+                                e('circle', { 
+                                    cx: 32, cy: 32, r: 28, 
+                                    className: 'text-gray-200',
+                                    strokeWidth: 4,
+                                    fill: 'none',
+                                    stroke: 'currentColor'
+                                }),
+                                e('circle', { 
+                                    cx: 32, cy: 32, r: 28,
+                                    className: 'text-blue-500',
+                                    strokeWidth: 4,
+                                    fill: 'none',
+                                    stroke: 'currentColor',
+                                    strokeDasharray: `${2 * Math.PI * 28}`,
+                                    strokeDashoffset: `${2 * Math.PI * 28 * (1 - Math.min(stats.thisWeekCompleted / 25, 1))}`,
+                                    strokeLinecap: 'round'
+                                })
+                            ),
+                            e('div', { className: 'absolute inset-0 flex items-center justify-center text-xs font-bold' },
+                                stats.thisWeekCompleted
+                            )
+                        ),
+                        e('div', { className: 'text-xs text-gray-500' }, 'This Week')
+                    ),
+                    e('div', { className: 'text-center' },
+                        e('div', { className: 'relative w-16 h-16 mx-auto mb-2' },
+                            e('svg', { className: 'w-16 h-16 transform -rotate-90' },
+                                e('circle', { 
+                                    cx: 32, cy: 32, r: 28, 
+                                    className: 'text-gray-200',
+                                    strokeWidth: 4,
+                                    fill: 'none',
+                                    stroke: 'currentColor'
+                                }),
+                                e('circle', { 
+                                    cx: 32, cy: 32, r: 28,
+                                    className: stats.overdue > 0 ? 'text-red-500' : 'text-green-500',
+                                    strokeWidth: 4,
+                                    fill: 'none',
+                                    stroke: 'currentColor',
+                                    strokeDasharray: `${2 * Math.PI * 28}`,
+                                    strokeDashoffset: `${2 * Math.PI * 28 * (1 - Math.min(stats.overdue / 10, 1))}`,
+                                    strokeLinecap: 'round'
+                                })
+                            ),
+                            e('div', { className: 'absolute inset-0 flex items-center justify-center text-xs font-bold' },
+                                stats.overdue
+                            )
+                        ),
+                        e('div', { className: 'text-xs text-gray-500' }, 'Overdue')
+                    )
+                )
+            );
+        }
+        
+        // Simple Header component
+        function Header({ searchQuery, onSearchChange, onShowSettings, onViewChange, currentView }) {
+            const views = [
+                { id: 'dashboard', name: 'Dashboard', icon: '📊' },
+                { id: 'list', name: 'Tasks', icon: '📋' },
+                { id: 'goals', name: 'Goals', icon: '🎯' },
+                { id: 'automation', name: 'Automation', icon: '🤖' }
+            ];
+            
             return e('div', { className: 'bg-white shadow-sm border-b p-4' },
                 e('div', { className: 'flex items-center justify-between mb-4' },
-                    e('div', { className: 'flex items-center space-x-3' },
-                        e('h1', { className: 'text-2xl font-bold text-gray-900' }, 'TaskVault')
-                    ),
+                    e('h1', { className: 'text-2xl font-bold text-gray-900' }, 'TaskVault Ultimate'),
                     e('div', { className: 'flex items-center space-x-2' },
-                        e('button', {
-                            onClick: onToggleDebug,
-                            className: `p-2 text-xs ${showDebug ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700'}`
-                        }, 'Debug'),
                         e('button', {
                             onClick: onShowSettings,
                             className: 'p-2 text-gray-500 hover:text-gray-700'
-                        }, '⚙️'),
-                        e('div', { className: 'text-sm text-gray-500' }, 'Your Secondary Brain')
+                        }, '⚙️')
                     )
                 ),
-                e('input', {
+                
+                e('div', { className: 'flex items-center justify-between mb-4' },
+                    e('div', { className: 'flex space-x-1 bg-gray-100 rounded-lg p-1' },
+                        ...views.map(view =>
+                            e('button', {
+                                key: view.id,
+                                onClick: () => onViewChange(view.id),
+                                className: `px-3 py-1 rounded text-sm flex items-center space-x-1 ${
+                                    currentView === view.id ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                                }`
+                            },
+                                e('span', null, view.icon),
+                                e('span', null, view.name)
+                            )
+                        )
+                    )
+                ),
+                
+                (currentView === 'list' || currentView === 'dashboard') && e('input', {
                     type: 'text',
                     placeholder: 'Search tasks...',
                     value: searchQuery,
@@ -472,39 +1320,6 @@
             );
         }
         
-        // Stats Component
-        function StatsOverview() {
-            const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0, overdue: 0, today: 0 });
-            
-            useEffect(() => {
-                setStats(storage.getStats());
-            }, []);
-            
-            return e('div', { className: 'p-4 bg-white mx-4 mt-4 rounded-lg shadow-sm grid grid-cols-5 gap-2' },
-                e('div', { className: 'text-center' },
-                    e('div', { className: 'text-lg font-bold text-blue-600' }, stats.total),
-                    e('div', { className: 'text-xs text-gray-500' }, 'Total')
-                ),
-                e('div', { className: 'text-center' },
-                    e('div', { className: 'text-lg font-bold text-orange-600' }, stats.pending),
-                    e('div', { className: 'text-xs text-gray-500' }, 'Pending')
-                ),
-                e('div', { className: 'text-center' },
-                    e('div', { className: 'text-lg font-bold text-green-600' }, stats.completed),
-                    e('div', { className: 'text-xs text-gray-500' }, 'Done')
-                ),
-                e('div', { className: 'text-center' },
-                    e('div', { className: 'text-lg font-bold text-purple-600' }, stats.today),
-                    e('div', { className: 'text-xs text-gray-500' }, 'Today')
-                ),
-                e('div', { className: 'text-center' },
-                    e('div', { className: 'text-lg font-bold text-red-600' }, stats.overdue),
-                    e('div', { className: 'text-xs text-gray-500' }, 'Overdue')
-                )
-            );
-        }
-        
-        // Category Tabs Component
         function CategoryTabs({ selectedCategory, onCategoryChange }) {
             const categories = [
                 { id: 'all', label: 'All', icon: '📋' },
@@ -532,265 +1347,26 @@
             );
         }
         
-        // Task Item Component
-        function TaskItem({ task, onToggle, onDelete, onEdit }) {
-            const isOverdue = task.deadline && !task.completed && new Date(task.deadline) < new Date();
-            const isToday = task.deadline && !task.completed && 
-                new Date(task.deadline).toDateString() === new Date().toDateString();
-            
-            const priorityColors = {
-                high: 'text-red-600 bg-red-100',
-                medium: 'text-yellow-600 bg-yellow-100',
-                low: 'text-green-600 bg-green-100'
-            };
-            
-            return e('div', { 
-                className: `task-item bg-white rounded-lg shadow-sm border p-4 mb-3 priority-${task.priority} ${
-                    task.completed ? 'completed' : ''
-                } ${isOverdue ? 'overdue' : ''}`
-            },
-                e('div', { className: 'flex items-start justify-between' },
-                    e('div', { className: 'flex-1' },
-                        e('div', { className: 'flex items-center space-x-2 mb-2' },
-                            e('h3', { className: 'task-title font-medium text-gray-900' }, task.title),
-                            e('span', { 
-                                className: `px-2 py-1 rounded text-xs ${priorityColors[task.priority] || priorityColors.medium}`
-                            }, task.priority?.toUpperCase() || 'MEDIUM')
-                        ),
-                        e('p', { className: 'text-gray-600 text-sm mb-2' }, task.context),
-                        task.url && e('a', {
-                            href: task.url,
-                            target: '_blank',
-                            rel: 'noopener noreferrer',
-                            className: 'text-blue-500 text-sm hover:underline block mb-2 truncate'
-                        }, task.url),
-                        e('div', { className: 'flex flex-wrap items-center gap-2 mb-2' },
-                            task.deadline && e('div', { 
-                                className: `text-sm ${isOverdue ? 'text-red-600 font-medium' : isToday ? 'text-orange-600 font-medium' : 'text-gray-500'}`
-                            },
-                                '📅 ', new Date(task.deadline).toLocaleDateString(),
-                                task.time && ` ${task.time}`
-                            ),
-                            task.tags && task.tags.map((tag, i) =>
-                                e('span', { 
-                                    key: i, 
-                                    className: 'tag bg-blue-100 text-blue-800'
-                                }, `#${tag}`)
-                            )
-                        )
-                    ),
-                    e('div', { className: 'flex flex-col items-end space-y-2 ml-4' },
-                        e('button', {
-                            onClick: () => onToggle(task.id),
-                            className: `px-3 py-1 rounded text-sm transition-colors ${
-                                task.completed
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-gray-100 text-gray-800 hover:bg-blue-100 hover:text-blue-800'
-                            }`
-                        }, task.completed ? '✓ Done' : 'Mark Done'),
-                        e('div', { className: 'flex space-x-1' },
-                            e('button', {
-                                onClick: () => onEdit(task),
-                                className: 'px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs hover:bg-blue-200'
-                            }, '✏️'),
-                            e('button', {
-                                onClick: () => onDelete(task.id),
-                                className: 'px-2 py-1 bg-red-100 text-red-800 rounded text-xs hover:bg-red-200'
-                            }, '🗑️')
-                        )
-                    )
-                )
-            );
-        }
-        
-        // Task Form Component
-        function TaskForm({ task, onSave, onCancel }) {
-            const [title, setTitle] = useState(task?.title || '');
-            const [url, setUrl] = useState(task?.url || '');
-            const [context, setContext] = useState(task?.context || '');
-            const [category, setCategory] = useState(task?.category || 'link');
-            const [deadline, setDeadline] = useState(task?.deadline || '');
-            const [time, setTime] = useState(task?.time || '');
-            const [priority, setPriority] = useState(task?.priority || 'medium');
-            const [tagsInput, setTagsInput] = useState(task?.tags?.join(', ') || '');
-            
-            const handleVoiceResult = (transcript) => {
-                if (!title && transcript.length > 0) {
-                    setTitle(transcript);
-                } else {
-                    setContext(context + (context ? ' ' : '') + transcript);
+        function UndoToast({ show, onUndo, onDismiss, actionText }) {
+            useEffect(() => {
+                if (show) {
+                    const timer = setTimeout(onDismiss, 5000);
+                    return () => clearTimeout(timer);
                 }
-            };
+            }, [show, onDismiss]);
             
-            const handleVoiceError = (error) => {
-                console.error('Voice recognition error:', error);
-            };
+            if (!show) return null;
             
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                if (title.trim()) {
-                    const tags = tagsInput.split(',').map(t => t.trim()).filter(t => t);
-                    onSave({
-                        ...(task || {}),
-                        title: title.trim(),
-                        url: url.trim() || null,
-                        context: context.trim(),
-                        category,
-                        deadline: deadline || null,
-                        time: time || null,
-                        priority,
-                        tags
-                    });
-                }
-            };
-            
-            return e('div', { className: 'modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50' },
-                e('div', { className: 'bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto' },
-                    e('h2', { className: 'text-xl font-bold mb-4' }, task ? 'Edit Task' : 'Add New Task'),
-                    e('form', { onSubmit: handleSubmit },
-                        e('div', { className: 'flex space-x-2 mb-3' },
-                            e('input', {
-                                type: 'text',
-                                placeholder: 'Task title *',
-                                value: title,
-                                onChange: (e) => setTitle(e.target.value),
-                                className: 'flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500',
-                                required: true
-                            }),
-                            e(VoiceInput, {
-                                onResult: handleVoiceResult,
-                                onError: handleVoiceError
-                            })
-                        ),
-                        e('input', {
-                            type: 'url',
-                            placeholder: 'URL (optional)',
-                            value: url,
-                            onChange: (e) => setUrl(e.target.value),
-                            className: 'w-full px-3 py-2 border border-gray-300 rounded mb-3 focus:ring-2 focus:ring-blue-500'
-                        }),
-                        e('div', { className: 'flex space-x-2 mb-3' },
-                            e('textarea', {
-                                placeholder: 'Context/Notes',
-                                value: context,
-                                onChange: (e) => setContext(e.target.value),
-                                className: 'flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500',
-                                rows: 3
-                            }),
-                            e('div', { className: 'flex flex-col' },
-                                e(VoiceInput, {
-                                    onResult: (transcript) => setContext(context + (context ? ' ' : '') + transcript),
-                                    onError: handleVoiceError
-                                })
-                            )
-                        ),
-                        e('select', {
-                            value: category,
-                            onChange: (e) => setCategory(e.target.value),
-                            className: 'w-full px-3 py-2 border border-gray-300 rounded mb-3 focus:ring-2 focus:ring-blue-500'
-                        },
-                            e('option', { value: 'link' }, '🔗 Link'),
-                            e('option', { value: 'video' }, '📹 Video'),
-                            e('option', { value: 'image' }, '🖼️ Image'),
-                            e('option', { value: 'article' }, '📄 Article')
-                        ),
-                        e('select', {
-                            value: priority,
-                            onChange: (e) => setPriority(e.target.value),
-                            className: 'w-full px-3 py-2 border border-gray-300 rounded mb-3 focus:ring-2 focus:ring-blue-500'
-                        },
-                            e('option', { value: 'low' }, '🟢 Low Priority'),
-                            e('option', { value: 'medium' }, '🟡 Medium Priority'),
-                            e('option', { value: 'high' }, '🔴 High Priority')
-                        ),
-                        e('div', { className: 'grid grid-cols-2 gap-2 mb-3' },
-                            e('input', {
-                                type: 'date',
-                                placeholder: 'Deadline (optional)',
-                                value: deadline,
-                                onChange: (e) => setDeadline(e.target.value),
-                                className: 'px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500'
-                            }),
-                            e('input', {
-                                type: 'time',
-                                placeholder: 'Time (optional)',
-                                value: time,
-                                onChange: (e) => setTime(e.target.value),
-                                className: 'px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500'
-                            })
-                        ),
-                        e('input', {
-                            type: 'text',
-                            placeholder: 'Tags (comma separated)',
-                            value: tagsInput,
-                            onChange: (e) => setTagsInput(e.target.value),
-                            className: 'w-full px-3 py-2 border border-gray-300 rounded mb-4 focus:ring-2 focus:ring-blue-500'
-                        }),
-                        e('div', { className: 'flex space-x-3' },
-                            e('button', {
-                                type: 'submit',
-                                className: 'flex-1 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600'
-                            }, task ? 'Update Task' : 'Add Task'),
-                            e('button', {
-                                type: 'button',
-                                onClick: onCancel,
-                                className: 'flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400'
-                            }, 'Cancel')
-                        )
-                    )
-                )
-            );
-        }
-        
-        // Settings Modal Component
-        function SettingsModal({ onClose, onExport, onImport }) {
-            const fileInputRef = useRef();
-            
-            const handleImport = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const success = storage.importData(e.target.result);
-                        alert(success ? 'Data imported successfully!' : 'Import failed. Please check the file format.');
-                        if (success) window.location.reload();
-                    };
-                    reader.readAsText(file);
-                }
-            };
-            
-            return e('div', { className: 'modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50' },
-                e('div', { className: 'bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto' },
-                    e('h2', { className: 'text-xl font-bold mb-4' }, 'Settings'),
-                    e('div', { className: 'space-y-4' },
-                        e('div', { className: 'border-t pt-4' },
-                            e('h3', { className: 'font-medium mb-2' }, 'Data Management'),
-                            e('div', { className: 'space-y-2' },
-                                e('button', {
-                                    onClick: onExport,
-                                    className: 'w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600'
-                                }, 'Export Data'),
-                                e('button', {
-                                    onClick: () => fileInputRef.current?.click(),
-                                    className: 'w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600'
-                                }, 'Import Data'),
-                                e('input', {
-                                    ref: fileInputRef,
-                                    type: 'file',
-                                    accept: '.json',
-                                    onChange: handleImport,
-                                    style: { display: 'none' }
-                                })
-                            )
-                        )
-                    ),
-                    e('div', { className: 'flex space-x-3 mt-6' },
-                        e('button', {
-                            onClick: onClose,
-                            className: 'flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400'
-                        }, 'Close')
-                    )
-                )
+            return e('div', { className: 'undo-toast bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-3' },
+                e('span', { className: 'text-sm' }, actionText),
+                e('button', {
+                    onClick: onUndo,
+                    className: 'bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600'
+                }, 'Undo'),
+                e('button', {
+                    onClick: onDismiss,
+                    className: 'text-gray-300 hover:text-white'
+                }, '×')
             );
         }
         
@@ -799,27 +1375,18 @@
             const [tasks, setTasks] = useState([]);
             const [searchQuery, setSearchQuery] = useState('');
             const [selectedCategory, setSelectedCategory] = useState('all');
+            const [currentView, setCurrentView] = useState('dashboard');
             const [showTaskForm, setShowTaskForm] = useState(false);
             const [editingTask, setEditingTask] = useState(null);
             const [showSettings, setShowSettings] = useState(false);
-            const [sharedContent, setSharedContent] = useState(null);
-            const [undoToast, setUndoToast] = useState({ show: false, action: null, text: '' });
-            const [showDebug, setShowDebug] = useState(false);
-            const [debugInfo, setDebugInfo] = useState(null);
+            const [undoToast, setUndoToast] = useState({ show: false, text: '' });
+            const [activeTimer, setActiveTimer] = useState(null);
             
             const refreshTasks = () => {
                 setTasks(storage.getTasksByCategory(selectedCategory));
             };
             
             useEffect(() => {
-                // Handle shared content immediately on load
-                const shared = handleSharedContent();
-                if (shared) {
-                    setSharedContent(shared);
-                    setDebugInfo(shared.debugInfo);
-                    setTimeout(() => setSharedContent(null), 8000);
-                }
-                
                 refreshTasks();
             }, [selectedCategory]);
             
@@ -854,7 +1421,14 @@
                         taskData.deadline,
                         taskData.time,
                         taskData.priority,
-                        taskData.tags
+                        taskData.tags,
+                        {
+                            estimatedTime: taskData.estimatedTime,
+                            energyLevel: taskData.energyLevel,
+                            projectId: taskData.projectId,
+                            complexity: taskData.complexity,
+                            businessValue: taskData.businessValue
+                        }
                     );
                     showUndoToast('Task added');
                 }
@@ -883,15 +1457,94 @@
                 setShowTaskForm(true);
             };
             
-            const handleExport = () => {
-                const data = storage.exportData();
-                const blob = new Blob([data], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `taskvault-backup-${new Date().toISOString().split('T')[0]}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
+            const handleStartTimer = (taskId) => {
+                if (activeTimer) {
+                    storage.stopTimeTracking(activeTimer.id);
+                }
+                const entry = storage.startTimeTracking(taskId);
+                setActiveTimer(entry);
+            };
+            
+            const handleStopTimer = (entryId) => {
+                storage.stopTimeTracking(entryId);
+                setActiveTimer(null);
+                refreshTasks();
+            };
+            
+            const stats = storage.getStats();
+            const heatmapData = storage.generateProductivityHeatmap();
+            
+            const renderCurrentView = () => {
+                switch (currentView) {
+                    case 'dashboard':
+                        return e('div', { className: 'px-4 space-y-6' },
+                            e('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6' },
+                                e(GoalsManager, { 
+                                    goals: storage.goals, 
+                                    onAddGoal: (title, desc, type, target, metric) => {
+                                        storage.addGoal(title, desc, type, target, metric);
+                                        setTasks([...storage.tasks]); // Trigger refresh
+                                    }
+                                }),
+                                e(VelocityChart, { velocityData: stats.velocity })
+                            ),
+                            e('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6' },
+                                e(ProductivityHeatmap, { heatmapData }),
+                                e(TimeTracker, { 
+                                    activeEntry: activeTimer,
+                                    onStart: handleStartTimer,
+                                    onStop: handleStopTimer
+                                })
+                            )
+                        );
+                    case 'goals':
+                        return e('div', { className: 'px-4' },
+                            e(GoalsManager, { 
+                                goals: storage.goals, 
+                                onAddGoal: (title, desc, type, target, metric) => {
+                                    storage.addGoal(title, desc, type, target, metric);
+                                    setTasks([...storage.tasks]);
+                                }
+                            })
+                        );
+                    case 'automation':
+                        return e('div', { className: 'px-4' },
+                            e(AutomationManager, { 
+                                rules: storage.automationRules,
+                                onAddRule: () => {},
+                                onToggleRule: (ruleId) => {
+                                    const rule = storage.automationRules.find(r => r.id === ruleId);
+                                    if (rule) {
+                                        rule.active = !rule.active;
+                                        storage.saveAutomationRules();
+                                        setTasks([...storage.tasks]);
+                                    }
+                                }
+                            })
+                        );
+                    default:
+                        return e('div', { className: 'px-4' },
+                            filteredTasks.length === 0
+                                ? e('div', { className: 'text-center text-gray-500 py-8' },
+                                    searchQuery
+                                        ? 'No tasks match your search.'
+                                        : selectedCategory === 'all'
+                                            ? 'No tasks yet. Add your first task!'
+                                            : `No ${selectedCategory} tasks yet.`
+                                )
+                                : filteredTasks.map(task =>
+                                    e(UltimateTaskItem, {
+                                        key: task.id,
+                                        task,
+                                        onToggle: handleToggleTask,
+                                        onDelete: handleDeleteTask,
+                                        onEdit: handleEditTask,
+                                        onStartTimer: handleStartTimer,
+                                        activeTimer
+                                    })
+                                )
+                        );
+                }
             };
             
             return e('div', { className: 'min-h-screen bg-gray-50 pb-20' },
@@ -899,54 +1552,16 @@
                     searchQuery, 
                     onSearchChange: setSearchQuery,
                     onShowSettings: () => setShowSettings(true),
-                    onToggleDebug: () => setShowDebug(!showDebug),
-                    showDebug
+                    onViewChange: setCurrentView,
+                    currentView
                 }),
                 
-                // Debug info
-                e(DebugInfo, { debugInfo, show: showDebug }),
+                e(UltimateStatsOverview, { stats }),
                 
-                // Shared content notification
-                sharedContent && sharedContent.task && e('div', { className: 'mx-4 mt-4 p-3 bg-green-100 border border-green-300 rounded-lg' },
-                    e('p', { className: 'text-green-800 text-sm font-medium' },
-                        `✅ Added shared ${sharedContent.category}: "${sharedContent.title}"`
-                    ),
-                    sharedContent.url && e('p', { className: 'text-green-700 text-xs mt-1 truncate' }, sharedContent.url)
-                ),
-                
-                // No shared content found warning
-                sharedContent && !sharedContent.task && debugInfo && e('div', { className: 'mx-4 mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg' },
-                    e('p', { className: 'text-yellow-800 text-sm font-medium' },
-                        '⚠️ Web share opened TaskVault but no URL was detected in parameters'
-                    ),
-                    e('p', { className: 'text-yellow-700 text-xs mt-1' }, 
-                        'Check debug info (top right) or browser console for details'
-                    )
-                ),
-                
-                e(StatsOverview),
+                (currentView === 'list' || currentView === 'dashboard') && 
                 e(CategoryTabs, { selectedCategory, onCategoryChange: setSelectedCategory }),
                 
-                // Task List
-                e('div', { className: 'px-4' },
-                    filteredTasks.length === 0
-                        ? e('div', { className: 'text-center text-gray-500 py-8' },
-                            searchQuery
-                                ? 'No tasks match your search.'
-                                : selectedCategory === 'all'
-                                    ? 'No tasks yet. Add your first task!'
-                                    : `No ${selectedCategory} tasks yet.`
-                        )
-                        : filteredTasks.map(task =>
-                            e(TaskItem, {
-                                key: task.id,
-                                task,
-                                onToggle: handleToggleTask,
-                                onDelete: handleDeleteTask,
-                                onEdit: handleEditTask
-                            })
-                        )
-                ),
+                renderCurrentView(),
                 
                 // Floating Add Button
                 e('button', {
@@ -960,22 +1575,6 @@
                     actionText: undoToast.text,
                     onUndo: handleUndo,
                     onDismiss: () => setUndoToast({ show: false, text: '' })
-                }),
-                
-                // Modals
-                (showTaskForm || editingTask) && e(TaskForm, {
-                    task: editingTask,
-                    onSave: handleSaveTask,
-                    onCancel: () => {
-                        setShowTaskForm(false);
-                        setEditingTask(null);
-                    }
-                }),
-                
-                showSettings && e(SettingsModal, {
-                    onClose: () => setShowSettings(false),
-                    onExport: handleExport,
-                    onImport: () => {}
                 })
             );
         }
