@@ -44,6 +44,29 @@
             border-color: #007bff;
             background: #e7f3ff;
         }
+        .clipboard-area.focused {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+        .safari-paste-input {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .paste-button {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .paste-button:hover {
+            background: linear-gradient(135deg, #0056b3 0%, #004494 100%);
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -51,6 +74,10 @@
     
     <script>
         const { useState, useEffect, createElement: e, useRef } = React;
+        
+        // Safari detection
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         
         // PWA Installation Manager
         let deferredPrompt = null;
@@ -339,6 +366,24 @@
             return matches ? matches[0] : null;
         }
         
+        // Safari-compatible clipboard handler
+        async function handleSafariClipboard(onUrlDetected) {
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    // Modern clipboard API
+                    const text = await navigator.clipboard.readText();
+                    const url = detectUrlFromText(text);
+                    if (url) {
+                        onUrlDetected(url, text);
+                        return true;
+                    }
+                }
+            } catch (error) {
+                console.log('Clipboard API not available or permission denied');
+            }
+            return false;
+        }
+        
         // Voice Recognition Component
         function VoiceInput({ onResult, onError }) {
             const [isListening, setIsListening] = useState(false);
@@ -414,17 +459,60 @@
             );
         }
         
-        // Clipboard Drop Zone
+        // Enhanced Clipboard Drop Zone with Safari support
         function ClipboardDropZone({ onUrlDetected }) {
             const [isDragOver, setIsDragOver] = useState(false);
+            const [isFocused, setIsFocused] = useState(false);
+            const hiddenInputRef = useRef(null);
             
+            // Regular paste event handler
             const handlePaste = async (e) => {
                 e.preventDefault();
-                const text = e.clipboardData.getData('text');
+                const text = e.clipboardData ? e.clipboardData.getData('text') : '';
                 const url = detectUrlFromText(text);
                 if (url) {
                     onUrlDetected(url, text);
+                } else if (isSafari && !text) {
+                    // Safari might not provide clipboard data in paste event
+                    const success = await handleSafariClipboard(onUrlDetected);
+                    if (!success) {
+                        alert('Please try copying the URL again and clicking the "Paste from Clipboard" button');
+                    }
                 }
+            };
+            
+            // Safari-specific paste button handler
+            const handleSafariPaste = async () => {
+                const success = await handleSafariClipboard(onUrlDetected);
+                if (!success) {
+                    // Fallback: focus hidden input and try manual paste
+                    if (hiddenInputRef.current) {
+                        hiddenInputRef.current.focus();
+                        hiddenInputRef.current.value = '';
+                        setTimeout(() => {
+                            if (hiddenInputRef.current.value) {
+                                const url = detectUrlFromText(hiddenInputRef.current.value);
+                                if (url) {
+                                    onUrlDetected(url, hiddenInputRef.current.value);
+                                }
+                            } else {
+                                alert('Please copy a URL first, then click this button');
+                            }
+                        }, 100);
+                    }
+                }
+            };
+            
+            // Hidden input paste handler for Safari fallback
+            const handleHiddenInputPaste = (e) => {
+                setTimeout(() => {
+                    const text = e.target.value;
+                    const url = detectUrlFromText(text);
+                    if (url) {
+                        onUrlDetected(url, text);
+                        e.target.value = '';
+                    }
+                }, 10);
             };
             
             const handleDragOver = (e) => {
@@ -446,17 +534,47 @@
                 }
             };
             
-            return e('div', { 
-                className: `clipboard-area ${isDragOver ? 'dragover' : ''}`,
-                onPaste: handlePaste,
-                onDragOver: handleDragOver,
-                onDragLeave: handleDragLeave,
-                onDrop: handleDrop,
-                tabIndex: 0
-            },
-                e('p', { className: 'text-gray-600 font-medium' }, '📋 Quick Add'),
-                e('p', { className: 'text-sm text-gray-500 mt-1' }, 'Paste or drag URLs here to quickly add tasks'),
-                e('p', { className: 'text-xs text-gray-400 mt-2' }, 'Ctrl+V or drag and drop')
+            const handleFocus = () => setIsFocused(true);
+            const handleBlur = () => setIsFocused(false);
+            
+            return e('div', null,
+                e('div', { 
+                    className: `clipboard-area ${isDragOver ? 'dragover' : ''} ${isFocused ? 'focused' : ''}`,
+                    onPaste: handlePaste,
+                    onDragOver: handleDragOver,
+                    onDragLeave: handleDragLeave,
+                    onDrop: handleDrop,
+                    onFocus: handleFocus,
+                    onBlur: handleBlur,
+                    tabIndex: 0
+                },
+                    e('p', { className: 'text-gray-600 font-medium' }, '📋 Quick Add'),
+                    e('p', { className: 'text-sm text-gray-500 mt-1' }, 
+                        isSafari && isMobile ? 
+                        'Copy URL and tap "Paste from Clipboard" button below' :
+                        isSafari ?
+                        'Paste URLs here (Cmd+V) or use button below' :
+                        'Paste or drag URLs here to quickly add tasks'
+                    ),
+                    e('p', { className: 'text-xs text-gray-400 mt-2' }, 
+                        isSafari ? 'Safari users: Use paste button for best experience' : 'Ctrl+V or drag and drop'
+                    ),
+                    
+                    // Safari-specific paste button
+                    isSafari && e('button', {
+                        onClick: handleSafariPaste,
+                        className: 'paste-button'
+                    }, '📋 Paste from Clipboard')
+                ),
+                
+                // Hidden input for Safari fallback
+                isSafari && e('input', {
+                    ref: hiddenInputRef,
+                    type: 'text',
+                    className: 'safari-paste-input',
+                    onPaste: handleHiddenInputPaste,
+                    placeholder: 'Paste here'
+                })
             );
         }
         
@@ -489,7 +607,8 @@
             return e('div', { className: 'bg-white shadow-sm border-b p-4' },
                 e('div', { className: 'flex items-center justify-between mb-4' },
                     e('div', { className: 'flex items-center space-x-3' },
-                        e('h1', { className: 'text-2xl font-bold text-gray-900' }, 'TaskVault')
+                        e('h1', { className: 'text-2xl font-bold text-gray-900' }, 'TaskVault'),
+                        isSafari && e('span', { className: 'text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded' }, 'Safari')
                     ),
                     e('div', { className: 'flex items-center space-x-2' },
                         e('button', {
