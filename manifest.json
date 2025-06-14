@@ -2,7 +2,7 @@
   "name": "TaskVault - Your Secondary Brain",
   "short_name": "TaskVault",
   "description": "Store and organize links, images, and contextual information with deadline tracking",
-  "start_url": "/",
+  "start_url": "/?utm_source=pwa",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1E90FF",
@@ -28,6 +28,7 @@
   "share_target": {
     "action": "/",
     "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
     "params": {
       "title": "title",
       "text": "text",
@@ -60,5 +61,11 @@
       ]
     }
   ],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "protocol_handlers": [
+    {
+      "protocol": "web+taskvault",
+      "url": "/?url=%s"
+    }
+  ]
 }

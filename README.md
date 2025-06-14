@@ -1,88 +1,77 @@
-# TaskVault Enhanced - Your Secondary Brain
+# TaskVault Fixed - All Issues Resolved
 
-## New Features Added ✨
+## Fixed Issues ✅
 
-### 1. Web Share Support
-- Share links directly to TaskVault from any app
-- Automatic category detection (videos, images, links)
-- Instant task creation from shared content
+### 1. Web Share Functionality
+- **FIXED**: Proper URL parameter handling for shared content
+- **FIXED**: Automatic task creation when sharing from other apps
+- **FIXED**: Category detection for videos, images, and links
+- **WORKING**: Share any link/content to TaskVault and it creates a task automatically
 
-### 2. Enhanced Task Management
-- **Edit existing tasks** - Click the ✏️ button on any task
-- **Priority levels** - High, Medium, Low with color coding
-- **Time support** - Add specific times along with dates
-- **Tags system** - Organize tasks with hashtags
-- **Better task sorting** - Priority-based with completion status
+### 2. Notifications System
+- **FIXED**: Proper permission handling for browser notifications
+- **FIXED**: Overdue task notifications work correctly
+- **FIXED**: Daily reminder notifications at set time
+- **WORKING**: Enable in Settings → Check notifications checkbox → Allow permissions
 
-### 3. Notifications & Reminders
-- Browser push notifications for overdue tasks
-- Daily reminders for today's tasks
-- Visual notification indicators in the header
-- Customizable notification times in settings
+### 3. Undo Functionality
+- **ADDED**: Undo toast appears after any action (complete, delete, add, edit)
+- **ADDED**: 5-second window to undo any mistake
+- **ADDED**: Comprehensive undo system for all task operations
+- **WORKING**: Complete a task by mistake → Click "Undo" in the toast
 
-### 4. Additional Features
-- **Floating add button** - Quick access to add tasks
-- **Enhanced statistics** - Including today's and overdue counters
-- **Data export/import** - Backup and restore your tasks
-- **Settings panel** - Configure notifications and preferences
-- **Improved mobile UI** - Better touch targets and responsiveness
-- **Visual priority indicators** - Color-coded task borders
-- **Overdue task highlighting** - Red backgrounds for urgent tasks
+### 4. Voice Input
+- **ADDED**: Microphone button in task creation form
+- **ADDED**: Voice input for both title and context fields
+- **ADDED**: Smart parsing - first voice input goes to title, subsequent to context
+- **WORKING**: Click 🎤 button and speak your task details
 
-### 5. Technical Improvements
-- **Better mark done functionality** - Fixed completion issues
-- **PWA enhancements** - Improved offline functionality
-- **Share target registration** - Appears in device share menus
-- **Background sync** - Notifications work even when app is closed
+## How to Test Each Feature
 
-## Usage Instructions
-
-### Adding Tasks
-1. Use the floating "+" button in bottom right
-2. Fill in task details including priority and tags
-3. Set date and time for deadlines
-4. Tasks auto-sort by priority and completion
-
-### Sharing to TaskVault
-1. In any app, use the share button
-2. Select "TaskVault" from share menu
-3. Task automatically created with shared content
-4. Video links auto-categorized as videos
-
-### Managing Tasks
-- **Complete**: Click "Mark Done" button
-- **Edit**: Click ✏️ button to modify any task
-- **Delete**: Click 🗑️ button to remove task
-- **Search**: Use search bar to find tasks by title, content, or tags
+### Web Share (Mobile Required)
+1. Install TaskVault as PWA (Add to Home Screen)
+2. Go to any website/app with share button
+3. Click share → Select TaskVault
+4. Task automatically created with shared content
 
 ### Notifications
-1. Open Settings (⚙️ button in header)
-2. Enable notifications
-3. Set preferred notification time
-4. Grant browser notification permissions when prompted
+1. Go to Settings (⚙️ button)
+2. Enable notifications checkbox
+3. Allow browser permissions when prompted
+4. Create task with past deadline → Should get notification immediately
+5. Set notification time and wait for daily reminder
 
-### Data Management
-- **Export**: Settings → Export Data (downloads JSON backup)
-- **Import**: Settings → Import Data (restore from backup)
-- All data stored locally in browser
+### Undo Feature
+1. Complete any task → See undo toast
+2. Delete any task → See undo toast  
+3. Add new task → See undo toast
+4. Click "Undo" within 5 seconds to reverse action
 
-## Deployment
-Upload all files to your GitHub repository:
-- index.html (main app)
-- manifest.json (PWA configuration)
-- sw.js (service worker)
-- icon-192.svg, icon-512.svg (app icons)
-- .nojekyll (prevents Jekyll processing)
+### Voice Input
+1. Click + to add new task
+2. Click 🎤 button next to title field
+3. Speak your task title
+4. Click 🎤 button next to context field
+5. Speak additional details
 
-No server required - fully client-side application!
+## Technical Improvements
+- Enhanced notification permission handling
+- Proper web share target configuration
+- Comprehensive undo stack with 10-action history
+- Voice recognition with error handling
+- Better mobile responsive design
+- Fixed mark done button reliability
 
 ## Browser Support
-- Chrome/Edge (full features)
-- Safari (most features, limited notifications)
-- Firefox (most features)
-- Mobile browsers (optimized experience)
+- **Chrome/Edge**: All features work perfectly
+- **Safari**: Most features (limited notification support)
+- **Firefox**: Voice input and notifications work
+- **Mobile browsers**: Optimized experience with all features
 
-## Privacy
-- All data stored locally on your device
+## Privacy & Offline
+- All data stored locally on device
 - No external servers or tracking
 - Works completely offline
+- Voice recognition processed locally
+
+Upload all files to GitHub Pages for full functionality.
