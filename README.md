@@ -1,38 +1,44 @@
-# TaskVault Safari Fixed - Clipboard Support for All Browsers
+# TaskVault with iPhone Shortcuts Support
 
-## Safari Clipboard Issues Resolved
+## iPhone Shortcut Integration
 
-This version fixes clipboard functionality for Safari browsers with multiple fallback methods:
+TaskVault now supports URLs in the format: `https://your-site.github.io/taskvault/?task=<encoded-url>`
 
-### Safari-Specific Features:
-
-1. **Modern Clipboard API**: Uses navigator.clipboard.readText() when available
-2. **Paste Button**: Blue "Paste from Clipboard" button for Safari users
-3. **Hidden Input Fallback**: Backup method for older Safari versions
-4. **Visual Indicators**: Shows Safari badge and specific instructions
-
-### How It Works:
-
-**Desktop Safari:**
-- Try regular Cmd+V in the Quick Add area
-- If that doesn't work, use the "Paste from Clipboard" button
-- Browser will request clipboard permission once
-
-**Mobile Safari (iPhone/iPad):**
-- Copy URL in another app
-- Return to TaskVault
-- Tap "Paste from Clipboard" button
-- URL automatically creates task
-
-**Other Browsers:**
-- Regular Ctrl+V or Cmd+V works as before
-- Drag and drop still supported
+### Supported URL Parameters:
+- `?task=<url>` - Your iPhone shortcut format
+- `?url=<url>` - Standard web share format
+- `?text=<url>` - Alternative format
+- `?u=<url>` - Short parameter format
 
 ### Features:
-- Auto-detects Safari and shows appropriate UI
-- Multiple clipboard access methods for compatibility
-- Visual feedback when pasting works
-- Automatic URL categorization (videos, articles, images)
-- All existing features maintained (voice input, undo, etc.)
+- Automatic URL decoding for encoded parameters
+- Detects iPhone shortcut vs web share source
+- Shows appropriate success message
+- Tags tasks with "shortcut" or "shared" automatically
+- Auto-categorizes content (videos, articles, images, links)
 
-The Safari version provides the best clipboard experience across all Apple devices and browsers.
+### How Your iPhone Shortcut Should Work:
+
+1. **Get Clipboard/Shared URL**
+2. **Encode URL** (if needed): Use "Encode URL" action
+3. **Open URL**: `https://santymetal.github.io/taskvault/?task=` + encoded URL
+
+### Example URLs That Work:
+- `https://santymetal.github.io/taskvault/?task=https%3A//youtube.com/watch%3Fv%3D123`
+- `https://santymetal.github.io/taskvault/?task=https://twitter.com/status/123`
+- `https://santymetal.github.io/taskvault/?url=https://example.com`
+
+### Testing Your Shortcut:
+1. Copy any URL in Safari
+2. Run your shortcut
+3. TaskVault should open and automatically create a task
+4. Look for green success message: "✅ Added via iPhone shortcut"
+
+### Benefits:
+- One-tap task creation from any app
+- Automatic categorization and tagging
+- Works offline (saves to local storage)
+- No manual typing required
+- Perfect for capturing content on the go
+
+The app will automatically decode URL-encoded parameters and create tasks with proper metadata.

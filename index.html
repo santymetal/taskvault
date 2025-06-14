@@ -310,15 +310,26 @@
         function handleSharedContent() {
             const urlParams = new URLSearchParams(window.location.search);
             
-            // Check all possible URL parameters
-            const sharedUrl = urlParams.get('url') || urlParams.get('text') || urlParams.get('u') || urlParams.get('link');
+            // Check all possible URL parameters including iPhone shortcut format
+            let sharedUrl = urlParams.get('url') || urlParams.get('text') || urlParams.get('u') || urlParams.get('link') || urlParams.get('task');
             const sharedTitle = urlParams.get('title') || urlParams.get('subject') || urlParams.get('name') || '';
+            
+            // Handle URL-encoded parameters (from iPhone shortcuts)
+            if (sharedUrl) {
+                try {
+                    sharedUrl = decodeURIComponent(sharedUrl);
+                } catch (e) {
+                    // If decoding fails, use the original URL
+                    console.log('URL decoding failed, using original:', sharedUrl);
+                }
+            }
             
             console.log('🔍 Checking shared content:', {
                 url: sharedUrl,
                 title: sharedTitle,
                 allParams: Object.fromEntries(urlParams.entries()),
-                fullUrl: window.location.href
+                fullUrl: window.location.href,
+                decodedUrl: sharedUrl
             });
             
             if (sharedUrl) {
@@ -347,13 +358,15 @@
                     }
                 }
                 
-                // Add task
-                const task = storage.addTask(title, sharedUrl, 'Shared via web share', category, null, null, 'medium', ['shared']);
+                // Add task with appropriate context based on source
+                const context = urlParams.get('task') ? 'Added via iPhone shortcut' : 'Shared via web share';
+                const tags = urlParams.get('task') ? ['shortcut'] : ['shared'];
+                const task = storage.addTask(title, sharedUrl, context, category, null, null, 'medium', tags);
                 
                 // Clear URL parameters
                 window.history.replaceState({}, document.title, window.location.pathname);
                 
-                return { title, url: sharedUrl, category, task };
+                return { title, url: sharedUrl, category, task, source: urlParams.get('task') ? 'shortcut' : 'share' };
             }
             
             return null;
@@ -1105,7 +1118,7 @@
                 // Shared content notification
                 sharedContent && e('div', { className: 'mx-4 mt-4 p-3 bg-green-100 border border-green-300 rounded-lg' },
                     e('p', { className: 'text-green-800 text-sm font-medium' },
-                        `✅ Added shared ${sharedContent.category}: "${sharedContent.title}"`
+                        `✅ Added ${sharedContent.source === 'shortcut' ? 'via iPhone shortcut' : 'shared'} ${sharedContent.category}: "${sharedContent.title}"`
                     ),
                     sharedContent.url && e('p', { className: 'text-green-700 text-xs mt-1 truncate' }, sharedContent.url)
                 ),
