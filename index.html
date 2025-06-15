@@ -67,6 +67,13 @@
         .paste-button:hover {
             background: linear-gradient(135deg, #0056b3 0%, #004494 100%);
         }
+        .url-display {
+            word-break: break-all;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+            max-width: 100%;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -731,7 +738,7 @@
                             href: task.url,
                             target: '_blank',
                             rel: 'noopener noreferrer',
-                            className: 'text-blue-500 text-sm hover:underline block mb-2 truncate'
+                            className: 'text-blue-500 text-sm hover:underline block mb-2 url-display'
                         }, task.url),
                         e('div', { className: 'flex flex-wrap items-center gap-2 mb-2' },
                             task.deadline && e('div', { 
@@ -783,6 +790,20 @@
             const [priority, setPriority] = useState(task?.priority || 'medium');
             const [tagsInput, setTagsInput] = useState(task?.tags?.join(', ') || '');
             
+            // Initialize state properly for editing
+            useEffect(() => {
+                if (task) {
+                    setTitle(task.title || '');
+                    setUrl(task.url || '');
+                    setContext(task.context || '');
+                    setCategory(task.category || 'link');
+                    setDeadline(task.deadline || '');
+                    setTime(task.time || '');
+                    setPriority(task.priority || 'medium');
+                    setTagsInput(task.tags?.join(', ') || '');
+                }
+            }, [task]);
+            
             const handleVoiceResult = (transcript) => {
                 if (!title && transcript.length > 0) {
                     setTitle(transcript);
@@ -793,6 +814,16 @@
             
             const handleVoiceError = (error) => {
                 console.error('Voice recognition error:', error);
+            };
+            
+            // Move URL to context function
+            const moveUrlToContext = () => {
+                if (url.trim()) {
+                    const urlText = url.trim();
+                    const newContext = context ? `${context}\n\n${urlText}` : urlText;
+                    setContext(newContext);
+                    setUrl('');
+                }
             };
             
             const handleSubmit = (e) => {
@@ -831,13 +862,21 @@
                                 onError: handleVoiceError
                             })
                         ),
-                        e('input', {
-                            type: 'url',
-                            placeholder: 'URL (optional)',
-                            value: url,
-                            onChange: (e) => setUrl(e.target.value),
-                            className: 'w-full px-3 py-2 border border-gray-300 rounded mb-3 focus:ring-2 focus:ring-blue-500'
-                        }),
+                        e('div', { className: 'flex space-x-2 mb-3' },
+                            e('input', {
+                                type: 'url',
+                                placeholder: 'URL (optional)',
+                                value: url,
+                                onChange: (e) => setUrl(e.target.value),
+                                className: 'flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500'
+                            }),
+                            url.trim() && e('button', {
+                                type: 'button',
+                                onClick: moveUrlToContext,
+                                className: 'px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200',
+                                title: 'Move URL to context notes'
+                            }, '↓ Notes')
+                        ),
                         e('div', { className: 'flex space-x-2 mb-3' },
                             e('textarea', {
                                 placeholder: 'Context/Notes',

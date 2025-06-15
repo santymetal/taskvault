@@ -1,70 +1,45 @@
-# TaskVault
+# TaskVault - Editing & URL Display Fixed
 
-**TaskVault** is a minimal personal task manager designed to collect, store, and manage links or URLs as actionable tasks.
+## Issues Resolved
 
----
+### 1. Task Editing Page Hanging - FIXED
+- Added proper useEffect to initialize form state when editing tasks
+- Fixed React state synchronization issues
+- Form now loads existing task data correctly without hanging
 
-## 🔥 Features
+### 2. URL Word Wrapping - FIXED  
+- Added comprehensive CSS for URL breaking: word-break, word-wrap, overflow-wrap
+- Replaced truncate with proper word breaking classes
+- URLs now wrap properly on all screen sizes instead of overflowing
 
-- ✅ Add any link (Twitter, YouTube, Medium, etc.) as a task.
-- ✅ Paste from clipboard to add links manually.
-- ✅ Semi-automated iOS Shortcut integration.
-- ✅ Hosted on GitHub Pages.
-- ✅ Works fully offline (PWA enabled).
-- ✅ Clean, distraction-free interface.
+### 3. URL Management Enhancement - NEW
+- Added "↓ Notes" button next to URL field when URL is present
+- One-click move URL from URL field to context/notes field
+- Helps organize long URLs in notes section instead of main URL field
 
----
+## All Previous Features Maintained:
+- iPhone shortcut support (?task=<url>)
+- Safari clipboard functionality with paste button
+- Voice input and undo functionality
+- Automatic content categorization
+- Task priority and deadline management
+- Data export/import capabilities
 
-## 🔗 iOS Automation Flow
+## How the Fixes Work:
 
-You can fully automate link collection using iOS Shortcuts:
+**Editing Tasks:**
+- Click edit button → form opens with all fields pre-populated
+- No more page hanging or blank forms
+- Smooth editing experience
 
-### Step 1: Create a Shortcut
+**URL Display:**
+- Long URLs wrap naturally instead of being cut off
+- Clickable and readable on mobile devices
+- Professional appearance on all screen sizes
 
-- Read Clipboard
-- If Clipboard contains `https://`
-- Encode URL (Clipboard)
-- Set Variable `EncodedTask` to Encoded URL
-- Open URL: `https://santymetal.github.io/taskvault/?task=EncodedTask`
+**URL Management:**
+- When editing, click "↓ Notes" to move URL to context field
+- Useful for keeping URLs as reference while using URL field for something else
+- Clean organization of task information
 
-### Step 2: Create Automation
-
-- Trigger: App Open → Apps like Safari, Twitter, YouTube
-- Action: Run the above shortcut
-- Disable: "Ask Before Running"
-
-🎯 Now, whenever you copy a link and open any supported app, TaskVault auto-launches with the link added.
-
----
-
-## 💡 Internals
-
-- TaskVault accepts new tasks via query params:
-  
-
-- `main.js` parses the URL on load and automatically adds the task.
-
----
-
-## 📦 Hosting
-
-The app is completely hosted using GitHub Pages:
-
-👉 [TaskVault Live App](https://santymetal.github.io/taskvault/)
-
----
-
-## 🚀 Future Plans
-
-- Notifications (once browser API permits PWA notifications on iOS)
-- Web Share Target API integration
-- Cross-device sync via local backend (optional)
-- Share extension for faster task creation
-
----
-
-## 🙌 Credits
-
-Built by [Santosh](https://github.com/santymetal).
-
----
+Perfect for managing content from iPhone shortcuts, web sharing, and manual entry.
